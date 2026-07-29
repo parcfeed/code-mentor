@@ -1,0 +1,266 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ────────────────────────────── ENUMS ──────────────────────────────
+
+enum Difficulty {
+  Beginner
+  Intermediate
+  Advanced
+
+  @@map("difficulty")
+}
+
+enum SnippetStatus {
+  open
+  reviewed
+
+  @@map("snippet_status")
+}
+
+enum ReportStatus {
+  pending
+  resolved
+  dismissed
+
+  @@map("report_status")
+}
+
+enum ReportSeverity {
+  low
+  medium
+  high
+
+  @@map("report_severity")
+}
+
+enum UserRole {
+  member
+  moderator
+  admin
+
+  @@map("user_role")
+}
+
+enum BadgeTone {
+  emerald
+  neutral
+
+  @@map("badge_tone")
+}
+
+enum VoteKind {
+  up
+  down
+
+  @@map("vote_kind")
+}
+
+// ────────────────────────────── USERS ──────────────────────────────
+
+model User {
+  id              String   @id @default(cuid())
+  name            String
+  username        String   @unique
+  email           String   @unique
+  emailVerified   DateTime?
+  image           String?  @map("avatar_url")
+  hashedPassword  String?  @map("hashed_password")
+  bio           String   @default("")
+  reputation    Int      @default(0)
+  level         Int      @default(1)
+  levelTitle    String   @default("Newcomer")    @map("level_title")
+  role          UserRole @default(member)
+  joinedAt      DateTime @default(now())          @map("joined_at")
+  createdAt     DateTime @default(now())          @map("created_at")
+  updatedAt     DateTime @default(now())          @map("updated_at")
+
+  snippets      Snippet[]
+  reviews       Review[]
+  reviewVotes   ReviewVote[]
+  badges        UserBadge[]
+  reportsMade   Report[]        @relation("reporter")
+  reportsTarget Report[]        @relation("target")
+
+  Account  Account[]
+  Session  Session[]
+
+  @@map("users")
+}
+
+// ────────────────────────────── BADGES ─────────────────────────────
+
+model Badge {
+  id          String     @id
+  label       String
+  description String
+  tone        BadgeTone  @default(neutral)
+
+  users       UserBadge[]
+
+  @@map("badges")
+}
+
+model UserBadge {
+  userId   String   @map("user_id")
+  badgeId  String   @map("badge_id")
+  earnedAt DateTime @default(now()) @map("earned_at")
+
+  user  User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@id([userId, badgeId])
+  @@map("user_badges")
+}
+
+// ────────────────────────────── SNIPPETS ───────────────────────────
+
+model Snippet {
+  id            String        @id @default(uuid())
+  authorId      String        @map("author_id")
+  title         String
+  description   String        @default("")
+  code          String
+  language      String
+  difficulty    Difficulty
+  isAnonymous   Boolean       @default(false) @map("is_anonymous")
+  status        SnippetStatus @default(open)
+  reviewsCount  Int           @default(0)     @map("reviews_count")
+  averageRating Decimal       @default(0)     @db.Decimal(3, 2) @map("average_rating")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  author  User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  reviews Review[]
+  reports Report[]
+
+  @@index([authorId], map: "idx_snippets_author")
+  @@index([language], map: "idx_snippets_language")
+  @@index([status], map: "idx_snippets_status")
+  @@map("snippets")
+}
+
+// ────────────────────────────── REVIEWS ────────────────────────────
+
+model Review {
+  id          String   @id @default(uuid())
+  snippetId   String   @map("snippet_id")
+  reviewerId  String   @map("reviewer_id")
+  summary     String
+  rating      Int
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  snippet      Snippet       @relation(fields: [snippetId], references: [id], onDelete: Cascade)
+  reviewer     User          @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+  lineComments LineComment[]
+  votes        ReviewVote[]
+  reports      Report[]
+
+  @@unique([snippetId, reviewerId], map: "idx_reviews_snippet_reviewer")
+  @@index([snippetId], map: "idx_reviews_snippet")
+  @@index([reviewerId], map: "idx_reviews_reviewer")
+  @@map("reviews")
+}
+
+// ────────────────────────────── LINE COMMENTS ──────────────────────
+
+model LineComment {
+  id         String   @id @default(uuid())
+  reviewId   String   @map("review_id")
+  lineNumber Int      @map("line_number")
+  content    String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId], map: "idx_line_comments_review")
+  @@map("line_comments")
+}
+
+// ────────────────────────────── REVIEW VOTES ───────────────────────
+
+model ReviewVote {
+  reviewId  String   @map("review_id")
+  userId    String   @map("user_id")
+  kind      VoteKind
+  createdAt DateTime @default(now()) @map("created_at")
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([reviewId, userId])
+  @@map("review_votes")
+}
+
+// ────────────────────────────── REPORTS ────────────────────────────
+
+model Report {
+  id            String         @id @default(uuid())
+  reporterId    String         @map("reporter_id")
+  targetUserId  String         @map("target_user_id")
+  reviewId      String?        @map("review_id")
+  snippetId     String?        @map("snippet_id")
+  reason        String
+  reportedContent String       @map("reported_content")
+  severity      ReportSeverity @default(low)
+  status        ReportStatus   @default(pending)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  resolvedAt    DateTime?      @map("resolved_at")
+
+  reporter    User   @relation("reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  targetUser  User   @relation("target", fields: [targetUserId], references: [id], onDelete: Cascade)
+  snippet     Snippet? @relation(fields: [snippetId], references: [id], onDelete: SetNull)
+  review      Review?  @relation(fields: [reviewId], references: [id], onDelete: SetNull)
+
+  @@index([status], map: "idx_reports_status")
+  @@map("reports")
+}
+
+// ────────────────────────────── NEXTAUTH ───────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @map("refresh_token")
+  access_token      String? @map("access_token")
+  expires_at        Int?    @map("expires_at")
+  token_type        String? @map("token_type")
+  scope             String?
+  id_token          String? @map("id_token")
+  session_state     String? @map("session_state")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId], map: "idx_account_provider_provideraccountid")
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token], map: "idx_verificationtoken_identifier_token")
+  @@map("verification_tokens")
+}
