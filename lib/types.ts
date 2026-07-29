@@ -26,7 +26,6 @@ export type User = {
   name: string
   username: string
   email: string
-  avatar: string
   reputation: number
   level: number
   levelTitle: string
@@ -40,7 +39,7 @@ export type User = {
 export type LineComment = {
   id: string
   line: number
-  author: Pick<User, "id" | "name" | "avatar">
+  author: Pick<User, "id" | "name">
   content: string
   createdAt: string
 }
@@ -48,7 +47,7 @@ export type LineComment = {
 export type Review = {
   id: string
   snippetId: string
-  reviewer: Pick<User, "id" | "name" | "username" | "avatar" | "reputation">
+  reviewer: Pick<User, "id" | "name" | "username" | "reputation">
   summary: string
   rating: number
   upvotes: number
@@ -61,10 +60,10 @@ export type Snippet = {
   id: string
   title: string
   code: string
-  language: Language
+  language: string
   difficulty: Difficulty
   isAnonymous: boolean
-  author: Pick<User, "id" | "name" | "username" | "avatar">
+  author: Pick<User, "id" | "name" | "username">
   createdAt: string
   reviewsCount: number
   averageRating: number
@@ -77,8 +76,8 @@ export type Report = {
   reviewSnippet: string
   reason: string
   reportedContent: string
-  reporter: Pick<User, "id" | "name" | "avatar">
-  target: Pick<User, "id" | "name" | "avatar">
+  reporter: Pick<User, "id" | "name">
+  target: Pick<User, "id" | "name">
   createdAt: string
   status: "pending" | "resolved" | "dismissed"
   severity: "low" | "medium" | "high"
@@ -110,7 +109,7 @@ export const REVIEW_CHECKLIST = [
   "Le feedback est constructif et bienveillant",
 ]
 
-export const languageColors: Record<Language, string> = {
+export const languageColors: Record<string, string> = {
   Python: "#3572A5",
   JavaScript: "#F1E05A",
   TypeScript: "#3178C6",

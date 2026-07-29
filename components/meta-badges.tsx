@@ -1,15 +1,15 @@
 import { Star } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import type { Difficulty, Language } from "@/lib/types"
+import type { Difficulty } from "@/lib/types"
 import { languageColors } from "@/lib/types"
 
-export function LanguageBadge({ language }: { language: Language }) {
+export function LanguageBadge({ language }: { language: string }) {
   return (
     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
       <span
         className="size-2.5 rounded-full"
-        style={{ backgroundColor: languageColors[language] }}
+        style={{ backgroundColor: languageColors[language] ?? "#94a3b8" }}
         aria-hidden
       />
       {language}

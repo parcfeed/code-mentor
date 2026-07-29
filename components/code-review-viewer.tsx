@@ -1,7 +1,9 @@
 "use client"
 
 import { Plus, MessageSquare, X, Send } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { loader } from "@monaco-editor/react"
+import { useTheme } from "next-themes"
 import { UserAvatar } from "@/components/user-avatar"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -13,6 +15,7 @@ export type DraftComment = { line: number; content: string }
 
 export function CodeReviewViewer({
   code,
+  language,
   existingComments = [],
   mode = "view",
   drafts = [],
@@ -20,6 +23,7 @@ export function CodeReviewViewer({
   onRemoveDraft,
 }: {
   code: string
+  language?: string
   existingComments?: LineComment[]
   mode?: "view" | "review"
   drafts?: DraftComment[]
@@ -31,6 +35,26 @@ export function CodeReviewViewer({
   const [text, setText] = useState("")
   const { data: session } = useSession()
   const userName = session?.user?.name ?? "Moi"
+  const { resolvedTheme } = useTheme()
+  const [coloredLines, setColoredLines] = useState<string[] | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setColoredLines(null)
+    loader.init().then((monaco) => {
+      if (cancelled) return
+      monaco.editor.setTheme(resolvedTheme === "dark" ? "vs-dark" : "vs")
+      return monaco.editor
+        .colorize(code, language || "plaintext", { tabSize: 2 })
+        .then((html: string) => {
+          if (cancelled) return
+          setColoredLines(html.split("<br/>"))
+        })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [code, language, resolvedTheme])
 
   const commentsByLine = existingComments.reduce<Record<number, LineComment[]>>((acc, c) => {
     acc[c.line] = acc[c.line] ? [...acc[c.line], c] : [c]
@@ -73,15 +97,18 @@ export function CodeReviewViewer({
                 )}
                 {num}
               </span>
-              <code className="w-full overflow-x-auto whitespace-pre px-4 text-foreground/90">{line || " "}</code>
+              <code
+                className="w-full overflow-x-auto whitespace-pre px-4 text-foreground/90"
+                {...(coloredLines?.[idx]
+                  ? { dangerouslySetInnerHTML: { __html: coloredLines[idx] || "&nbsp;" } }
+                  : { children: line || " " })}
+              />
             </div>
 
-            {/* Existing comment threads */}
             {lineComments.map((c) => (
               <CommentRow key={c.id} name={c.author.name} content={c.content} time={timeAgo(c.createdAt)} />
             ))}
 
-            {/* Saved draft */}
             {draft && !isComposing && (
               <div className="border-y border-border bg-muted/40 py-3 pl-12 pr-4 font-sans">
                 <div className="flex items-start gap-2.5">
@@ -107,7 +134,6 @@ export function CodeReviewViewer({
               </div>
             )}
 
-            {/* Composer */}
             {isComposing && (
               <div className="border-y border-border bg-muted/40 py-3 pl-12 pr-4 font-sans">
                 <div className="flex items-start gap-2.5">

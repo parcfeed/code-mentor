@@ -106,7 +106,7 @@ export function CreateSnippetForm() {
           </div>
           <div className="flex flex-col gap-2">
             <Label>Difficulty</Label>
-            <Select value={difficulty} onValueChange={setDifficulty}>
+            <Select value={difficulty} onValueChange={(v) => setDifficulty(v ?? "Beginner")}>
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>

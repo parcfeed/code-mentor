@@ -33,7 +33,6 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
         orderBy: { earnedAt: "desc" },
       },
       snippets: {
-        where: { isAnonymous: false },
         orderBy: { createdAt: "desc" },
         include: {
           author: { select: { id: true, name: true, username: true, image: true } },
@@ -53,6 +52,11 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
   if (!user) notFound()
 
+  const isOwner = session?.user?.id === user.id
+  const visibleSnippets = isOwner
+    ? user.snippets
+    : user.snippets.filter((s) => !s.isAnonymous)
+
   const repInLevel = user.reputation % 500
   const repToNext = repInLevel === 0 ? 0 : 500 - repInLevel
 
@@ -70,14 +74,14 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
     tone: ub.badge.tone,
   }))
 
-  const userSnippets = user.snippets.map((s) => ({
+  const userSnippets = visibleSnippets.map((s) => ({
     id: s.id,
     title: s.title,
     code: s.code,
     language: s.language,
     difficulty: s.difficulty,
     isAnonymous: s.isAnonymous,
-    author: s.author,
+    author: s.isAnonymous ? { id: "", name: "Anonyme", username: "", image: null } : s.author,
     createdAt: s.createdAt.toISOString(),
     reviewsCount: s.reviewsCount,
     averageRating: Number(s.averageRating),

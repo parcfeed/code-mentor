@@ -120,6 +120,7 @@ export function SnippetDetail({ snippet, reviews }: { snippet: Snippet; reviews:
 
           <CodeReviewViewer
             code={snippet.code}
+            language={snippet.language}
             mode={mode}
             existingComments={mode === "view" ? reviews.flatMap((r) => r.lineComments) : []}
             drafts={drafts}

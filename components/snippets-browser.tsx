@@ -54,9 +54,9 @@ export function SnippetsBrowser({ initialQuery = "" }: { initialQuery?: string }
   const totalPages = Math.max(1, Math.ceil(data.total / PAGE_SIZE))
   const current = Math.min(page, totalPages)
 
-  function resetPage<T>(setter: (v: T) => void) {
-    return (v: T) => {
-      setter(v)
+  function resetPage<T>(setter: (v: T) => void, fallback?: T) {
+    return (v: T | null) => {
+      setter(v ?? (fallback as T))
       setPage(1)
     }
   }
@@ -75,7 +75,7 @@ export function SnippetsBrowser({ initialQuery = "" }: { initialQuery?: string }
             />
           </div>
           <div className="flex gap-3">
-            <Select value={language} onValueChange={resetPage(setLanguage)}>
+            <Select value={language} onValueChange={resetPage<string>(setLanguage, "all")}>
               <SelectTrigger className="w-full min-w-36 sm:w-44">
                 <SlidersHorizontal className="size-4 text-muted-foreground" />
                 <SelectValue placeholder="Langage" />
@@ -87,7 +87,7 @@ export function SnippetsBrowser({ initialQuery = "" }: { initialQuery?: string }
                 ))}
               </SelectContent>
             </Select>
-            <Select value={difficulty} onValueChange={resetPage(setDifficulty)}>
+            <Select value={difficulty} onValueChange={resetPage<string>(setDifficulty, "all")}>
               <SelectTrigger className="w-full min-w-36 sm:w-44">
                 <SelectValue placeholder="Difficulté" />
               </SelectTrigger>
@@ -101,7 +101,7 @@ export function SnippetsBrowser({ initialQuery = "" }: { initialQuery?: string }
           </div>
         </div>
 
-        <Tabs value={status} onValueChange={resetPage(setStatus)}>
+        <Tabs value={status} onValueChange={resetPage<string>(setStatus, "all")}>
           <TabsList>
             <TabsTrigger value="all">Tous</TabsTrigger>
             <TabsTrigger value="open">À relire</TabsTrigger>

@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server"
 import { z } from "zod"
+import { getServerSession } from "next-auth"
 import { prisma } from "@/lib/prisma"
+import { authOptions } from "@/lib/auth"
 import { requireUser } from "@/lib/auth-guards"
 import { successResponse, validationError, internalError } from "@/lib/api-response"
 import { findMaxSimilarity } from "@/lib/similarly"
@@ -35,6 +37,13 @@ export async function GET(req: NextRequest) {
     if (language && language !== "all") where.language = language
     if (difficulty && difficulty !== "all") where.difficulty = difficulty
     if (status && status !== "all") where.status = status
+
+    if (status === "open") {
+      const session = await getServerSession(authOptions)
+      if (session?.user?.id) {
+        where.authorId = { not: session.user.id }
+      }
+    }
 
     const [snippets, total] = await Promise.all([
       prisma.snippet.findMany({

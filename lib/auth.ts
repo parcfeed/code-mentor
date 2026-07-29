@@ -1,13 +1,18 @@
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import bcrypt from "bcryptjs"
 import type { NextAuthOptions } from "next-auth"
+import type { Adapter } from "next-auth/adapters"
 import CredentialsProvider from "next-auth/providers/credentials"
 
 import { prisma } from "@/lib/prisma"
 import { checkBruteForce, rateLimit, recordFailedAttempt, resetBruteForce } from "@/lib/rate-limit"
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  // @auth/prisma-adapter embarque sa propre copie de @auth/core (souvent une version
+  // différente de celle utilisée par next-auth), donc le type Adapter généré ne
+  // correspond pas exactement à celui attendu ici, même si la forme réelle à l'exécution
+  // est compatible. Cast nécessaire pour lever ce conflit de types dupliqués.
+  adapter: PrismaAdapter(prisma) as Adapter,
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
   providers: [
