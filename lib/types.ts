@@ -122,7 +122,7 @@ export const languageColors: Record<string, string> = {
   "C#": "#178600",
 }
 
-export const monacoLanguageMap: Record<Language, string> = {
+export const monacoLanguageMap: Record<string, string> = {
   Python: "python",
   JavaScript: "javascript",
   TypeScript: "typescript",
