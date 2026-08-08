@@ -34,7 +34,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
 
         if (!res.ok) {
           const data = await res.json()
-          toast.error(data.error || "Échec de l'inscription")
+          toast.error(data.error?.message || "Échec de l'inscription")
           setLoading(false)
           return
         }
