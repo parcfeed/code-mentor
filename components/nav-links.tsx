@@ -22,7 +22,7 @@ export function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const { data: session } = useSession()
   const role = session?.user?.role
 
-  const isModerator = role === "moderator" || role === "admin"
+  const isModerator = role === "moderator"
   const navItems = isModerator
     ? [...baseNavItems.slice(0, 4), moderationItem, ...baseNavItems.slice(4)]
     : baseNavItems

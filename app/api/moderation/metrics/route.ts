@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
 
     return successResponse(metrics)
   } catch (e) {
-    console.error("GET /api/admin/metrics", e)
+    console.error("GET /api/moderation/metrics", e)
     return internalError()
   }
 }

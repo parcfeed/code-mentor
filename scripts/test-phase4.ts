@@ -172,8 +172,8 @@ def subtract(a, b):
     console.log(`  No report created (similarity too low) — check trigram threshold`)
   }
 
-  // ─── TEST 5: Admin metrics ───
-  console.log("\n--- Test 5: Admin metrics calculation ---")
+  // ─── TEST 5: Métriques de modération ───
+  console.log("\n--- Test 5: Metrics calculation ---")
 
   const totalSnippets = await prisma.snippet.count()
   const totalReviews = await prisma.review.count()

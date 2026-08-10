@@ -11,12 +11,8 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/login", req.url))
   }
 
-  // /moderation/* : réservé aux modérateurs et admins
-  if (
-    pathname.startsWith("/moderation") &&
-    token.role !== "moderator" &&
-    token.role !== "admin"
-  ) {
+  // /moderation/* : réservé aux modérateurs
+  if (pathname.startsWith("/moderation") && token.role !== "moderator") {
     return NextResponse.redirect(new URL("/dashboard", req.url))
   }
 

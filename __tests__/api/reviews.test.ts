@@ -213,7 +213,7 @@ describe('GET /api/snippets/[id] — anonymat', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Test 4 — Modération réservée aux moderators/admins
+// Test 4 — Modération réservée aux modérateurs
 // ---------------------------------------------------------------------------
 describe('GET /api/reports — contrôle d\'accès', () => {
   beforeEach(() => {
@@ -238,23 +238,6 @@ describe('GET /api/reports — contrôle d\'accès', () => {
   it('retourne 200 quand le rôle est "moderator"', async () => {
     ;(getServerSession as ReturnType<typeof vi.fn>).mockResolvedValue({
       user: { id: 'user-mod', role: 'moderator' },
-    })
-
-    ;(prisma.report.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([])
-
-    const { GET } = await import('@/app/api/reports/route')
-
-    const req = makeRequest('http://localhost/api/reports')
-    const res = await GET()
-    const json = await res.json()
-
-    expect(res.status).toBe(200)
-    expect(json.success).toBe(true)
-  })
-
-  it('retourne 200 quand le rôle est "admin"', async () => {
-    ;(getServerSession as ReturnType<typeof vi.fn>).mockResolvedValue({
-      user: { id: 'user-admin', role: 'admin' },
     })
 
     ;(prisma.report.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([])

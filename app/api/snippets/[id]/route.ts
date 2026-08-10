@@ -57,9 +57,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const snippet = await prisma.snippet.findUnique({ where: { id } })
     if (!snippet) return notFound("Snippet introuvable")
 
-    // Seul l'auteur ou un admin peut modifier
-    const isAdmin = session!.user.role === "admin"
-    if (snippet.authorId !== session!.user.id && !isAdmin) {
+    // Seul l'auteur peut modifier
+    if (snippet.authorId !== session!.user.id) {
       return forbidden("Vous n'êtes pas autorisé à modifier cet extrait")
     }
 
@@ -97,9 +96,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     const snippet = await prisma.snippet.findUnique({ where: { id } })
     if (!snippet) return notFound("Snippet introuvable")
 
-    // Seul l'auteur ou un admin peut supprimer
-    const isAdmin = session!.user.role === "admin"
-    if (snippet.authorId !== session!.user.id && !isAdmin) {
+    // Seul l'auteur peut supprimer
+    if (snippet.authorId !== session!.user.id) {
       return forbidden("Vous n'êtes pas autorisé à supprimer cet extrait")
     }
 

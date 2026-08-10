@@ -15,8 +15,8 @@ export async function requireModerator() {
   if (!session?.user?.id) {
     return { session: null, error: unauthorized() }
   }
-  if (session.user.role !== "moderator" && session.user.role !== "admin") {
-    return { session: null, error: forbidden("Moderator or admin access required") }
+  if (session.user.role !== "moderator") {
+    return { session: null, error: forbidden("Moderator access required") }
   }
   return { session, error: null }
 }

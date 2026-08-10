@@ -7,7 +7,7 @@ import { ModerationQueue } from "@/components/moderation-queue"
 
 export default async function ModerationPage() {
   const session = await getServerSession(authOptions)
-  if (!session?.user || (session.user.role !== "moderator" && session.user.role !== "admin")) {
+  if (!session?.user || session.user.role !== "moderator") {
     redirect("/login")
   }
 

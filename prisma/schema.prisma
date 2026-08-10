@@ -43,7 +43,6 @@ enum ReportSeverity {
 enum UserRole {
   member
   moderator
-  admin
 
   @@map("user_role")
 }

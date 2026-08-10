@@ -21,9 +21,8 @@ export async function DELETE(
     if (!review) return notFound("Review introuvable")
     if (review.snippetId !== snippetId) return notFound("Review introuvable pour cet extrait")
 
-    // Seul l'auteur de la review ou un admin peut la supprimer
-    const isAdmin = session!.user.role === "admin"
-    if (review.reviewerId !== session!.user.id && !isAdmin) {
+    // Seul l'auteur de la review peut la supprimer
+    if (review.reviewerId !== session!.user.id) {
       return forbidden("Vous n'êtes pas autorisé à supprimer cette relecture")
     }
 
@@ -46,12 +45,10 @@ export async function DELETE(
     })
 
     // Retirer les points de réputation accordés lors de la création (+15)
-    if (!isAdmin || review.reviewerId === session!.user.id) {
-      await prisma.user.update({
-        where: { id: review.reviewerId },
-        data: { reputation: { decrement: 15 } },
-      })
-    }
+    await prisma.user.update({
+      where: { id: review.reviewerId },
+      data: { reputation: { decrement: 15 } },
+    })
 
     return successResponse({ id: reviewId, deleted: true })
   } catch (e) {
