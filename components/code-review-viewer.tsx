@@ -202,7 +202,9 @@ export function CodeReviewViewer({
 
   useEffect(() => {
     return () => {
-      zonesRef.current.forEach((z) => z.root.unmount())
+      zonesRef.current.forEach((z) => {
+        queueMicrotask(() => z.root.unmount())
+      })
       zonesRef.current.clear()
     }
   }, [])

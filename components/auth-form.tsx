@@ -97,7 +97,6 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             placeholder="you@student.edu"
             required
             autoComplete="email"
-            defaultValue={isRegister ? "" : "amina.cherif@student.edu"}
           />
         </div>
         <div className="flex flex-col gap-2">
@@ -111,7 +110,6 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
               required
               className="pr-9"
               autoComplete={isRegister ? "new-password" : "current-password"}
-              defaultValue={isRegister ? "" : "demo1234"}
             />
             <Button
               type="button"
