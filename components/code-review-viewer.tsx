@@ -42,12 +42,19 @@ export function CodeReviewViewer({
 
   const [activeLine, setActiveLine] = useState<number | null>(null)
   const [text, setText] = useState("")
+  const [isEditorReady, setIsEditorReady] = useState(false)
+
+  const modeRef = useRef(mode)
+  modeRef.current = mode
 
   const editorRef = useRef<MonacoEditorInstance | null>(null)
   const monacoRef = useRef<MonacoNS | null>(null)
   const decorationsRef = useRef<ReturnType<MonacoEditorInstance["createDecorationsCollection"]> | null>(null)
-  const zonesRef = useRef<
-    Map<number, { zoneId: string; node: HTMLDivElement; root: Root; zone: MonacoEditorNS.IViewZone }>
+  const zonesRef = useRef<Map<number, { zoneId: string; node: HTMLDivElement; zone: MonacoEditorNS.IViewZone }>>(
+    new Map(),
+  )
+  const widgetsRef = useRef<
+    Map<number, { widget: MonacoEditorNS.IContentWidget; node: HTMLDivElement; root: Root }>
   >(new Map())
 
   const monacoLanguage = language ? (monacoLanguageMap[language] ?? language.toLowerCase()) : "plaintext"
@@ -58,23 +65,32 @@ export function CodeReviewViewer({
   }, {})
   const draftByLine = new Map(drafts.map((d) => [d.line, d]))
 
-  function openComposer(line: number) {
+  const openComposer = useCallback((line: number) => {
     setActiveLine(line)
     setText(draftByLine.get(line)?.content ?? "")
-  }
-  function cancelComposer() {
+  }, [draftByLine])
+
+  const cancelComposer = useCallback(() => {
     setActiveLine(null)
     setText("")
-  }
-  function submit(line: number) {
-    if (!text.trim()) return
-    onAddDraft?.({ line, content: text.trim() })
-    setActiveLine(null)
-    setText("")
-  }
-  function remove(line: number) {
-    onRemoveDraft?.(line)
-  }
+  }, [])
+
+  const submit = useCallback(
+    (line: number) => {
+      if (!text.trim()) return
+      onAddDraft?.({ line, content: text.trim() })
+      setActiveLine(null)
+      setText("")
+    },
+    [text, onAddDraft],
+  )
+
+  const remove = useCallback(
+    (line: number) => {
+      onRemoveDraft?.(line)
+    },
+    [onRemoveDraft],
+  )
 
   // ─── Marge de glyphes : indicateur "+" pour ajouter un commentaire (mode review uniquement) ──
   const applyGlyphDecorations = useCallback(() => {
@@ -99,96 +115,142 @@ export function CodeReviewViewer({
     decorationsRef.current.set(decorations)
   }, [mode])
 
-  // ─── View zones : threads existants + brouillon + composeur, insérés sous la ligne concernée ──
-  const syncZones = useCallback(() => {
+  // ─── Effet 1 : Gestion STRUCTURALE (Ajout/Suppression des widgets et zones) ──
+  // Ne dépend que des lignes actives, PAS du texte en cours de saisie.
+  useEffect(() => {
+    if (!isEditorReady) return
     const editor = editorRef.current
-    if (!editor) return
+    const monaco = monacoRef.current
+    if (!editor || !monaco) return
 
     const linesNeeded = new Set<number>()
     Object.keys(commentsByLine).forEach((k) => linesNeeded.add(Number(k)))
     drafts.forEach((d) => linesNeeded.add(d.line))
-    if (activeLine != null) linesNeeded.add(activeLine)
+    if (activeLine != null) linesNeeded.add(activeLine); // <-- LE VRAI POINT-VIRGULE EST ICI
 
-    const currentLines = new Set(zonesRef.current.keys())
+    // 1. Retirer les widgets obsolètes
+    [...widgetsRef.current.keys()].forEach((line) => {
+      if (!linesNeeded.has(line)) {
+        const w = widgetsRef.current.get(line)
+        if (w) {
+          editor.removeContentWidget(w.widget)
+          widgetsRef.current.delete(line)
+          queueMicrotask(() => w.root.unmount())
+        }
+      }
+    }); // <-- ET ICI
 
+    // 2. Ajouter les nouveaux widgets
+    linesNeeded.forEach((line) => {
+      if (!widgetsRef.current.has(line)) {
+        const layoutWidth = editor.getLayoutInfo().contentWidth
+        const node = document.createElement("div")
+        node.style.width = `${layoutWidth}px`
+        node.style.boxSizing = "border-box"
+        node.style.userSelect = "text"
+        
+        // CORRECTION CRITIQUE : Empêche Monaco de voler le focus et de bloquer les boutons
+        node.addEventListener("mousedown", (e) => e.stopPropagation())
+
+        const root = createRoot(node)
+        const widget: MonacoEditorNS.IContentWidget = {
+          getId: () => `review-widget-${line}`,
+          getDomNode: () => node,
+          getPosition: () => ({
+            position: { lineNumber: line, column: 1 },
+            preference: [monaco.editor.ContentWidgetPositionPreference.BELOW],
+          }),
+          allowEditorOverflow: false,
+        }
+        editor.addContentWidget(widget)
+        widgetsRef.current.set(line, { widget, node, root })
+      }
+    }); // <-- ET ICI
+
+    // 3. Gérer les View Zones en une seule transaction
     editor.changeViewZones((accessor) => {
-      currentLines.forEach((line) => {
+      // Retirer les zones obsolètes
+      [...zonesRef.current.keys()].forEach((line) => {
         if (!linesNeeded.has(line)) {
           const z = zonesRef.current.get(line)
           if (z) {
             accessor.removeZone(z.zoneId)
             zonesRef.current.delete(line)
-            queueMicrotask(() => z.root.unmount())
           }
         }
-      })
-
+      }); // <-- ET ICI
+      // Ajouter les nouvelles zones
       linesNeeded.forEach((line) => {
-        let z = zonesRef.current.get(line)
-        if (!z) {
+        if (!zonesRef.current.has(line)) {
           const node = document.createElement("div")
           node.style.width = "100%"
-          const root = createRoot(node)
           const zone: MonacoEditorNS.IViewZone = { afterLineNumber: line, heightInPx: 1, domNode: node }
           const zoneId = accessor.addZone(zone)
-          z = { zoneId, node, root, zone }
-          zonesRef.current.set(line, z)
+          zonesRef.current.set(line, { zoneId, node, zone })
         }
-        z.root.render(
-          <ZoneContent
-            comments={commentsByLine[line] ?? []}
-            draft={draftByLine.get(line)}
-            isComposing={activeLine === line}
-            userName={userName}
-            text={activeLine === line ? text : ""}
-            onTextChange={setText}
-            onEdit={() => openComposer(line)}
-            onRemove={() => remove(line)}
-            onCancel={cancelComposer}
-            onSubmit={() => submit(line)}
-          />,
-        )
       })
     })
+  }, [isEditorReady, existingComments, drafts, activeLine]) // Dépendances structurelles uniquement
 
-    // Mesure la hauteur réelle du contenu monté puis relayout (le rendu React est asynchrone).
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const ed = editorRef.current
-        if (!ed) return
-        let changed = false
-        ed.changeViewZones((accessor) => {
-          zonesRef.current.forEach((z) => {
-            const measured = Math.max(z.node.scrollHeight, 1)
-            if (z.zone.heightInPx !== measured) {
-              z.zone.heightInPx = measured
-              accessor.layoutZone(z.zoneId)
-              changed = true
-            }
-          })
+  // ─── Effet 2 : Gestion VISUELLE (Rendu React et Mesure de hauteur) ──
+  // Se déclenche à chaque changement de texte, mais sans manipuler la structure Monaco.
+  useEffect(() => {
+    if (!isEditorReady) return
+    const editor = editorRef.current
+    if (!editor) return
+
+    // Rendu ou mise à jour du contenu React dans les widgets existants
+    widgetsRef.current.forEach((w, line) => {
+      w.root.render(
+        <ZoneContent
+          comments={commentsByLine[line] ?? []}
+          draft={draftByLine.get(line)}
+          isComposing={activeLine === line}
+          userName={userName}
+          text={activeLine === line ? text : ""}
+          onTextChange={setText}
+          onEdit={() => openComposer(line)}
+          onRemove={() => remove(line)}
+          onCancel={cancelComposer}
+          onSubmit={() => submit(line)}
+        />,
+      )
+    })
+
+    // Mesure asynchrone de la hauteur pour ajuster la ViewZone
+    const animationFrame = requestAnimationFrame(() => {
+      const ed = editorRef.current
+      if (!ed) return
+      
+      ed.changeViewZones((accessor) => {
+        widgetsRef.current.forEach((w, line) => {
+          const zone = zonesRef.current.get(line)
+          if (!zone) return
+          const measured = Math.max(w.node.offsetHeight, 1)
+          if (zone.zone.heightInPx !== measured) {
+            zone.zone.heightInPx = measured
+            accessor.layoutZone(zone.zoneId)
+          }
         })
-        void changed
       })
+      widgetsRef.current.forEach((w) => ed.layoutContentWidget(w.widget))
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [existingComments, drafts, activeLine, text, userName])
+
+    return () => cancelAnimationFrame(animationFrame)
+  }, [isEditorReady, existingComments, drafts, activeLine, text, userName, openComposer, remove, cancelComposer, submit])
 
   useEffect(() => {
-    syncZones()
-  }, [syncZones])
-
-  useEffect(() => {
+    if (!isEditorReady) return
     applyGlyphDecorations()
-  }, [applyGlyphDecorations])
+  }, [isEditorReady, applyGlyphDecorations])
 
   const handleMount: OnMount = (editorInstance, monaco) => {
     editorRef.current = editorInstance
     monacoRef.current = monaco
-    applyGlyphDecorations()
-    syncZones()
+    setIsEditorReady(true)
 
     editorInstance.onMouseDown((e) => {
-      if (mode !== "review") return
+      if (modeRef.current !== "review") return
       const type = e.target.type
       if (
         type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN ||
@@ -198,14 +260,27 @@ export function CodeReviewViewer({
         if (line) openComposer(line)
       }
     })
+
+    editorInstance.onDidLayoutChange(() => {
+      const width = editorInstance.getLayoutInfo().contentWidth
+      widgetsRef.current.forEach((w) => {
+        w.node.style.width = `${width}px`
+        editorInstance.layoutContentWidget(w.widget)
+      })
+    })
   }
 
   useEffect(() => {
     return () => {
-      zonesRef.current.forEach((z) => {
-        queueMicrotask(() => z.root.unmount())
-      })
+      const editor = editorRef.current
+      if (editor) {
+        widgetsRef.current.forEach((w) => {
+          editor.removeContentWidget(w.widget)
+          queueMicrotask(() => w.root.unmount())
+        })
+      }
       zonesRef.current.clear()
+      widgetsRef.current.clear()
     }
   }, [])
 
@@ -282,7 +357,8 @@ function ZoneContent({
   onSubmit: () => void
 }) {
   return (
-    <div className="font-sans text-[13px]">
+    // CORRECTION CRITIQUE : stoppe la propagation de la souris au niveau de la div principale
+    <div className="font-sans text-[13px]" onMouseDown={(e) => e.stopPropagation()}>
       {comments.map((c) => (
         <CommentRow key={c.id} name={c.author.name} content={c.content} time={timeAgo(c.createdAt)} />
       ))}

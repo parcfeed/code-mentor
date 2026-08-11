@@ -69,6 +69,30 @@ export const authOptions: NextAuthOptions = {
         token.reputation = user.reputation
         token.level = user.level
         token.levelTitle = user.levelTitle
+      } else if (token.id) {
+        // La réputation et le niveau évoluent après chaque review/vote/badge :
+        // on rafraîchit le token depuis la DB pour que le profil (sidebar) reste à jour.
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id },
+          select: {
+            name: true,
+            username: true,
+            role: true,
+            reputation: true,
+            level: true,
+            levelTitle: true,
+            image: true,
+          },
+        })
+        if (dbUser) {
+          token.name = dbUser.name
+          token.username = dbUser.username
+          token.role = dbUser.role
+          token.reputation = dbUser.reputation
+          token.level = dbUser.level
+          token.levelTitle = dbUser.levelTitle
+          token.picture = dbUser.image
+        }
       }
       return token
     },
