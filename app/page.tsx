@@ -48,13 +48,6 @@ const features = [
   },
 ]
 
-const stats = [
-  { value: "500+", label: "Snippets relus" },
-  { value: "80%", label: "Relectures constructives" },
-  { value: "25%", label: "Retours plus rapides" },
-  { value: "10+", label: "Langages supportés" },
-]
-
 export default function LandingPage() {
   return (
     <div className="flex min-h-screen flex-col">
@@ -115,15 +108,7 @@ export default function LandingPage() {
             <HeroPreview />
           </div>
 
-          <div className="mt-16 grid grid-cols-2 gap-6 border-t border-border pt-10 md:grid-cols-4">
-            {stats.map((s) => (
-              <div key={s.label}>
-                <p className="text-3xl font-semibold tracking-tight">{s.value}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{s.label}</p>
-              </div>
-            ))}
-          </div>
-        </section>
+          </section>
 
         {/* Features */}
         <section id="features" className="mx-auto max-w-6xl px-4 py-16 md:px-6">

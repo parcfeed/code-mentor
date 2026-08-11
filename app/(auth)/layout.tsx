@@ -8,26 +8,19 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       {/* Brand panel */}
-      <div className="relative hidden flex-col justify-between bg-sidebar p-10 lg:flex">
+      <div className="relative hidden flex-col bg-sidebar p-10 lg:flex">
         <Link href="/">
           <Logo />
         </Link>
-        <div className="max-w-md">
-          <Quote className="size-8 text-primary" />
-          <p className="mt-4 text-pretty text-xl font-medium leading-relaxed">
-            Les Reviews ligne par ligne sur CodeMentor m'ont plus appris sur le code propre en un mois
-            qu'un semestre entier de cours.
-          </p>
-          <p className="mt-4 text-sm text-muted-foreground">Sofia Reyes · Étudiante en informatique</p>
-        </div>
-        <div className="flex gap-8 text-sm">
-          <div>
-            <p className="text-2xl font-semibold tracking-tight text-primary">500+</p>
-            <p className="text-muted-foreground">Snippets relus</p>
-          </div>
-          <div>
-            <p className="text-2xl font-semibold tracking-tight text-primary">80%</p>
-            <p className="text-muted-foreground">Reviews constructives</p>
+        <div className="flex flex-1 items-center justify-center">
+          <div className="max-w-md text-center">
+            <Quote className="mx-auto size-8 text-primary" />
+            <p className="mt-4 text-balance text-2xl font-semibold leading-relaxed">
+              Améliorez votre code grâce aux retours de vos pairs.
+            </p>
+            <p className="mt-3 text-muted-foreground">
+              Soumettez vos snippets, réalisez des reviews et progressez ensemble.
+            </p>
           </div>
         </div>
       </div>

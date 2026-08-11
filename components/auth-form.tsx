@@ -1,7 +1,7 @@
 "use client"
 
 import { signIn } from "next-auth/react"
-import { Loader2 } from "lucide-react"
+import { Eye, EyeOff, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label"
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const isRegister = mode === "register"
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -100,23 +101,29 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           />
         </div>
         <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password">Mot de passe</Label>
-            {!isRegister && (
-              <button type="button" className="text-xs text-muted-foreground hover:text-foreground">
-                Mot de passe oublié ?
-              </button>
-            )}
+          <Label htmlFor="password">Mot de passe</Label>
+          <div className="relative">
+            <Input
+              id="password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              placeholder="••••••••"
+              required
+              className="pr-9"
+              autoComplete={isRegister ? "new-password" : "current-password"}
+              defaultValue={isRegister ? "" : "demo1234"}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute inset-y-0 right-0 h-full w-8 text-muted-foreground hover:bg-transparent hover:text-foreground"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+            >
+              {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+            </Button>
           </div>
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            placeholder="••••••••"
-            required
-            autoComplete={isRegister ? "new-password" : "current-password"}
-            defaultValue={isRegister ? "" : "demo1234"}
-          />
         </div>
 
         <Button type="submit" className="mt-2 w-full" disabled={loading}>

@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { AppHeader } from "@/components/app-header"
 import { Logo } from "@/components/logo"
+import { LogoutButton } from "@/components/logout-button"
 import { NavLinks } from "@/components/nav-links"
 import { UserAvatar } from "@/components/user-avatar"
 
@@ -36,6 +37,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             </div>
           </Link>
         )}
+        <LogoutButton />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col md:pl-64">

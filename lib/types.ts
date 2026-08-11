@@ -101,11 +101,9 @@ export const LANGUAGES: Language[] = [
 export const DIFFICULTIES: Difficulty[] = ["Beginner", "Intermediate", "Advanced"]
 
 export const REVIEW_CHECKLIST = [
-  "Le code est lisible et bien nommé",
-  "La logique est correcte et gère les cas limites",
-  "Aucun problème de performance évident",
-  "Respecte les conventions du langage",
-  "Les commentaires expliquent le pourquoi, pas le quoi",
+  "Le code est lisible et bien structuré",
+  "La logique est correcte et gère les cas importants",
+  "Le code respecte les bonnes pratiques du langage",
   "Le feedback est constructif et bienveillant",
 ]
 
