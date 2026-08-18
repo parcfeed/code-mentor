@@ -4,14 +4,11 @@ import { prisma } from "@/lib/prisma"
 import { authOptions } from "@/lib/auth"
 import { PageHeader } from "@/components/page-header"
 import { ModerationQueue } from "@/components/moderation-queue"
+import { Card } from "@/components/ui/card"
+import { ShieldAlert } from "lucide-react"
 
-export default async function ModerationPage() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user || session.user.role !== "moderator") {
-    redirect("/login")
-  }
-
-  const reports = await prisma.report.findMany({
+async function fetchReports() {
+  return prisma.report.findMany({
     orderBy: { createdAt: "desc" },
     include: {
       reporter: { select: { id: true, name: true, image: true } },
@@ -19,6 +16,39 @@ export default async function ModerationPage() {
       review: { select: { id: true, snippet: { select: { title: true } } } },
     },
   })
+}
+
+function ErrorView({ message }: { message: string }) {
+  return (
+    <div>
+      <PageHeader
+        title="Modération"
+        description="Examinez les Snippets et Reviews signalés pour garder les retours constructifs et respectueux."
+      />
+      <Card className="flex flex-col items-center gap-2 p-12 text-center">
+        <ShieldAlert className="size-8 text-destructive" />
+        <p className="font-medium">Erreur de chargement</p>
+        <p className="text-sm text-muted-foreground">{message}</p>
+      </Card>
+    </div>
+  )
+}
+
+export default async function ModerationPage() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user || session.user.role !== "moderator") {
+    redirect("/login")
+  }
+
+  let reports
+  try {
+    reports = await fetchReports()
+  } catch (e) {
+    console.error("GET /moderation — Prisma query failed:", e)
+    return (
+      <ErrorView message="Impossible de récupérer les signalements. Vérifiez la connexion à la base de données." />
+    )
+  }
 
   const mapped = reports.map((r) => ({
     id: r.id,
