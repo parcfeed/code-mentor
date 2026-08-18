@@ -44,9 +44,10 @@ export default async function ModerationPage() {
   try {
     reports = await fetchReports()
   } catch (e) {
-    console.error("GET /moderation — Prisma query failed:", e)
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error("GET /moderation — Prisma query failed:", msg)
     return (
-      <ErrorView message="Impossible de récupérer les signalements. Vérifiez la connexion à la base de données." />
+      <ErrorView message={`Erreur DB : ${msg}`} />
     )
   }
 
