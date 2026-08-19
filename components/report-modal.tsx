@@ -83,12 +83,16 @@ export function ReportModal({ open, onOpenChange, reviewId, snippetId }: ReportM
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-2">
+        <div className="space-y-2" role="radiogroup" aria-label="Raison du signalement">
           {REPORT_REASONS.map((reason) => (
-            <label
+            <button
               key={reason}
+              type="button"
+              role="radio"
+              aria-checked={selectedReason === reason}
+              onClick={() => setSelectedReason(reason)}
               className={cn(
-                "flex cursor-pointer items-center gap-3 rounded-lg border border-border px-4 py-3 text-sm transition-colors",
+                "flex w-full cursor-pointer items-center gap-3 rounded-lg border border-border px-4 py-3 text-left text-sm transition-colors",
                 "hover:bg-muted/50",
                 selectedReason === reason
                   ? "border-primary bg-primary/5 text-foreground"
@@ -108,7 +112,7 @@ export function ReportModal({ open, onOpenChange, reviewId, snippetId }: ReportM
                 )}
               </span>
               {reason}
-            </label>
+            </button>
           ))}
         </div>
 
