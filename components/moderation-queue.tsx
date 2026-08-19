@@ -27,9 +27,27 @@ type ReportItem = {
 }
 
 const severityStyles: Record<string, string> = {
-  low: "border-border bg-muted text-muted-foreground",
-  medium: "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  high: "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400",
+  low: "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  medium: "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  high: "border-rose-500/40 bg-rose-500/10 text-rose-600 dark:text-rose-400",
+}
+
+const statusStyles: Record<string, string> = {
+  pending: "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  resolved: "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  dismissed: "border-slate-400/40 bg-slate-400/10 text-slate-500 dark:text-slate-400",
+}
+
+const statusLabels: Record<string, string> = {
+  pending: "En attente",
+  resolved: "Résolu",
+  dismissed: "Rejeté",
+}
+
+const severityLabels: Record<string, string> = {
+  low: "Faible",
+  medium: "Moyen",
+  high: "Élevé",
 }
 
 export function ModerationQueue({ initialReports }: { initialReports: ReportItem[] }) {
@@ -82,12 +100,12 @@ export function ModerationQueue({ initialReports }: { initialReports: ReportItem
               <div className="flex items-center gap-2">
                 <Flag className="size-4 text-destructive" />
                 <span className="font-medium">{report.reason}</span>
-                <Badge variant="outline" className={cn("rounded-md capitalize", severityStyles[report.severity])}>
-                  {report.severity}
+                <Badge variant="outline" className={cn("rounded-md", severityStyles[report.severity])}>
+                  {severityLabels[report.severity] ?? report.severity}
                 </Badge>
-                {report.status !== "pending" && (
-                  <Badge variant="outline" className="rounded-md capitalize text-muted-foreground">{report.status}</Badge>
-                )}
+                <Badge variant="outline" className={cn("rounded-md", statusStyles[report.status])}>
+                  {statusLabels[report.status] ?? report.status}
+                </Badge>
               </div>
               <span className="text-xs text-muted-foreground">{timeAgo(report.createdAt)}</span>
             </div>
