@@ -2,7 +2,7 @@ import { NextRequest } from "next/server"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { requireUser, requireModerator } from "@/lib/auth-guards"
-import { successResponse, validationError, notFound, internalError } from "@/lib/api-response"
+import { successResponse, validationError, notFound, forbidden, internalError } from "@/lib/api-response"
 
 const createReportSchema = z.object({
   reviewId: z.string().min(1),
@@ -35,6 +35,11 @@ export async function POST(req: NextRequest) {
       },
     })
     if (!review) return notFound("Review introuvable")
+
+    // Un utilisateur ne peut pas signaler sa propre review
+    if (review.reviewerId === session!.user.id) {
+      return forbidden("Vous ne pouvez pas signaler votre propre review")
+    }
 
     const targetUserId = review.reviewer.id
     const snippetId = review.snippet.id

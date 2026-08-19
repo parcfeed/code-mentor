@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { ArrowBigUp, ArrowBigDown, MessageSquare, Flag } from "lucide-react"
 import Link from "next/link"
+import { useSession } from "next-auth/react"
 import { UserAvatar } from "@/components/user-avatar"
 import { RatingStars } from "@/components/meta-badges"
 import { Button } from "@/components/ui/button"
@@ -12,6 +13,8 @@ import { timeAgo } from "@/lib/utils"
 import { ReportModal } from "@/components/report-modal"
 
 export function ReviewCard({ review }: { review: Review }) {
+  const { data: session } = useSession()
+  const isOwn = session?.user?.id === review.reviewer.id
   const [vote, setVote] = useState<"up" | "down" | null>(null)
   const [score, setScore] = useState(review.upvotes - review.downvotes)
   const [reportOpen, setReportOpen] = useState(false)
@@ -100,9 +103,11 @@ export function ReviewCard({ review }: { review: Review }) {
               <ArrowBigDown className={cn("size-4", vote === "down" && "fill-destructive")} />
             </Button>
           </div>
-          <Button variant="ghost" size="sm" className="ml-auto h-8 text-muted-foreground hover:text-destructive" onClick={() => setReportOpen(true)}>
-            <Flag className="size-3.5" /> Signaler
-          </Button>
+          {!isOwn && (
+            <Button variant="ghost" size="sm" className="ml-auto h-8 text-muted-foreground hover:text-destructive" onClick={() => setReportOpen(true)}>
+              <Flag className="size-3.5" /> Signaler
+            </Button>
+          )}
         </footer>
       </article>
 
