@@ -207,6 +207,7 @@ model Report {
   reviewId      String?        @map("review_id")
   snippetId     String?        @map("snippet_id")
   reason        String
+  reporterComment String?     @map("reporter_comment")
   reportedContent String       @map("reported_content")
   severity      ReportSeverity @default(low)
   status        ReportStatus   @default(pending)

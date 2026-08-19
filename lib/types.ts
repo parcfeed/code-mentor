@@ -73,8 +73,10 @@ export type Snippet = {
 
 export type Report = {
   id: string
-  reviewSnippet: string
+  reviewSnippet: string | null
+  snippetId: string | null
   reason: string
+  reporterComment: string | null
   reportedContent: string
   reporter: Pick<User, "id" | "name">
   target: Pick<User, "id" | "name">

@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Check, X, ShieldAlert, Flag } from "lucide-react"
+import { Check, X, ShieldAlert, Flag, ExternalLink } from "lucide-react"
+import Link from "next/link"
 import { toast } from "sonner"
 import { UserAvatar } from "@/components/user-avatar"
 import { Card } from "@/components/ui/card"
@@ -13,8 +14,10 @@ import { timeAgo } from "@/lib/utils"
 
 type ReportItem = {
   id: string
-  reviewSnippet: string
+  reviewSnippet: string | null
+  snippetId: string | null
   reason: string
+  reporterComment: string | null
   reportedContent: string
   reporter: { id: string; name: string; avatar: string }
   target: { id: string; name: string; avatar: string }
@@ -89,9 +92,20 @@ export function ModerationQueue({ initialReports }: { initialReports: ReportItem
               <span className="text-xs text-muted-foreground">{timeAgo(report.createdAt)}</span>
             </div>
 
-            <p className="mt-2 text-sm text-muted-foreground">
-              Sur l'Snippet : <span className="font-medium text-foreground">{report.reviewSnippet}</span>
-            </p>
+            {report.reviewSnippet && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Sur le snippet :{" "}
+                <span className="font-medium text-foreground">{report.reviewSnippet}</span>
+                {report.snippetId && (
+                  <Link
+                    href={`/snippets/${report.snippetId}`}
+                    className="ml-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    Voir le snippet <ExternalLink className="size-3" />
+                  </Link>
+                )}
+              </p>
+            )}
 
             <blockquote className="mt-3 rounded-lg border-l-2 border-destructive/40 bg-muted/40 px-4 py-3 text-sm italic text-foreground/90">
               &ldquo;{report.reportedContent}&rdquo;
@@ -120,6 +134,13 @@ export function ModerationQueue({ initialReports }: { initialReports: ReportItem
                 </div>
               )}
             </div>
+
+            {report.reporterComment && (
+              <div className="mt-3 rounded-lg border border-border bg-muted/30 px-4 py-3">
+                <p className="text-xs font-medium text-muted-foreground">Précision du signalement :</p>
+                <p className="mt-1 text-sm text-foreground/90">&ldquo;{report.reporterComment}&rdquo;</p>
+              </div>
+            )}
           </Card>
         ))
       )}

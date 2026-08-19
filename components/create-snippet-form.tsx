@@ -58,7 +58,7 @@ export function CreateSnippetForm() {
       toast.success("Snippet publié ! Vos pairs peuvent maintenant le relire.")
       router.push("/snippets")
     } catch {
-      toast.error("Échec de la publication de l'Snippet")
+      toast.error("Échec de la publication du snippet")
     } finally {
       setLoading(false)
     }
@@ -137,7 +137,7 @@ export function CreateSnippetForm() {
         <div className="flex flex-col gap-2">
           <Button type="submit" size="lg" disabled={loading}>
             {loading && <Loader2 className="size-4 animate-spin" />}
-            Publier l'Snippet
+            Publier le snippet
           </Button>
           <p className="text-center text-xs text-muted-foreground">En publiant, vous acceptez que votre code soit partagé sous licence MIT.</p>
         </div>

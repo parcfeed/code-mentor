@@ -13,7 +13,7 @@ async function fetchReports() {
     include: {
       reporter: { select: { id: true, name: true, image: true } },
       targetUser: { select: { id: true, name: true, image: true } },
-      review: { select: { id: true, snippet: { select: { title: true } } } },
+      review: { select: { id: true, snippet: { select: { id: true, title: true } } } },
     },
   })
 }
@@ -23,7 +23,7 @@ function ErrorView({ message }: { message: string }) {
     <div>
       <PageHeader
         title="Modération"
-        description="Examinez les Snippets et Reviews signalés pour garder les retours constructifs et respectueux."
+        description="Examinez les snippets et reviews signalés pour garder les retours constructifs et respectueux."
       />
       <Card className="flex flex-col items-center gap-2 p-12 text-center">
         <ShieldAlert className="size-8 text-destructive" />
@@ -53,8 +53,10 @@ export default async function ModerationPage() {
 
   const mapped = reports.map((r) => ({
     id: r.id,
-    reviewSnippet: r.review?.snippet?.title ?? "Snippet inconnu",
+    reviewSnippet: r.review?.snippet?.title ?? null,
+    snippetId: r.review?.snippet?.id ?? r.snippetId ?? null,
     reason: r.reason,
+    reporterComment: r.reporterComment ?? null,
     reportedContent: r.reportedContent,
     reporter: { id: r.reporter.id, name: r.reporter.name, avatar: r.reporter.image ?? "" },
     target: { id: r.targetUser.id, name: r.targetUser.name, avatar: r.targetUser.image ?? "" },
@@ -67,7 +69,7 @@ export default async function ModerationPage() {
     <div>
       <PageHeader
         title="Modération"
-        description="Examinez les Snippets et Reviews signalés pour garder les retours constructifs et respectueux."
+        description="Examinez les snippets et reviews signalés pour garder les retours constructifs et respectueux."
       />
       <ModerationQueue initialReports={mapped} />
     </div>
