@@ -6,7 +6,6 @@ import { prisma } from "@/lib/prisma"
 import { authOptions } from "@/lib/auth"
 import { PageHeader } from "@/components/page-header"
 import { SnippetCard } from "@/components/snippet-card"
-import { UserAvatar } from "@/components/user-avatar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -35,7 +34,7 @@ export default async function DashboardPage() {
 
   if (!user) redirect("/login")
 
-  // Snippets ouverts à reviewer — on exclut ceux de l'utilisateur courant et ceux qu'il a déjà reviewés
+  // Snippets les plus récents à reviewer — on exclut ceux de l'utilisateur courant et ceux qu'il a déjà reviewés
   const openSnippets = await prisma.snippet.findMany({
     where: {
       status: "open",
@@ -47,7 +46,7 @@ export default async function DashboardPage() {
       },
     },
     orderBy: { createdAt: "desc" },
-    take: 4,
+    take: 6,
     include: {
       author: { select: { id: true, name: true, username: true, image: true } },
     },
@@ -59,7 +58,7 @@ export default async function DashboardPage() {
       OR: [{ snippet: { authorId: user.id } }, { reviewerId: user.id }],
     },
     orderBy: { createdAt: "desc" },
-    take: 4,
+    take: 5,
     include: {
       reviewer: { select: { id: true, name: true, image: true } },
       snippet: { select: { title: true } },
@@ -152,72 +151,77 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      <div className="mt-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-medium">Snippets à reviewer</h2>
-          <Button render={<Link href="/snippets" />} variant="ghost" size="sm">
-            Voir tout <ArrowRight className="size-4" />
-          </Button>
+      {/* Layout 2 colonnes : snippets à gauche, sidebar à droite */}
+      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_300px]">
+        {/* Colonne principale : snippets */}
+        <div>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-medium">Snippets à reviewer</h2>
+            <Button render={<Link href="/snippets" />} variant="ghost" size="sm">
+              Voir tout <ArrowRight className="size-4" />
+            </Button>
+          </div>
+
+          {toReview.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {toReview.map((s) => <SnippetCard key={s.id} snippet={s} />)}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Aucun snippet en attente de review.</p>
+          )}
         </div>
 
-        {toReview.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {toReview.map((s) => <SnippetCard key={s.id} snippet={s} />)}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">Aucun snippet en attente de review.</p>
-        )}
-      </div>
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <Card className="gap-0 p-5">
-          <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-lg bg-primary/10 font-semibold text-primary">
-              {user.level}
-            </span>
-            <div>
-              <p className="text-sm font-medium">{user.levelTitle}</p>
-              <p className="text-xs text-muted-foreground">Niveau {user.level}</p>
+        {/* Sidebar droite : niveau + activité */}
+        <div className="space-y-6">
+          <Card className="gap-0 p-5">
+            <div className="flex items-center gap-3">
+              <span className="flex size-10 items-center justify-center rounded-lg bg-primary/10 font-semibold text-primary">
+                {user.level}
+              </span>
+              <div>
+                <p className="text-sm font-medium">{user.levelTitle}</p>
+                <p className="text-xs text-muted-foreground">Niveau {user.level}</p>
+              </div>
             </div>
-          </div>
-          <div className="mt-4">
-            <div className="mb-1.5 flex justify-between text-xs text-muted-foreground">
-              <span>{user.reputation.toLocaleString()} XP</span>
-              <span>{((Math.floor(user.reputation / 500) + 1) * 500).toLocaleString()} XP</span>
+            <div className="mt-4">
+              <div className="mb-1.5 flex justify-between text-xs text-muted-foreground">
+                <span>{user.reputation.toLocaleString()} XP</span>
+                <span>{((Math.floor(user.reputation / 500) + 1) * 500).toLocaleString()} XP</span>
+              </div>
+              <Progress value={xpProgress} />
+              <p className="mt-2 text-xs text-muted-foreground">{repToNext} XP pour atteindre le niveau {nextLevel}</p>
             </div>
-            <Progress value={xpProgress} />
-            <p className="mt-2 text-xs text-muted-foreground">{repToNext} XP pour atteindre le niveau {nextLevel}</p>
-          </div>
-        </Card>
+          </Card>
 
-        <Card className="gap-0 p-5 lg:col-span-2">
-          <h2 className="font-medium">Activité récente</h2>
-          <ul className="mt-4 flex flex-col gap-4">
-            {activity.length > 0 ? (
-              activity.map((a) => (
-                <li key={a.id} className="flex gap-3">
-                  <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                    <GitPullRequestArrow className="size-3.5" />
-                  </span>
-                  <div className="text-sm leading-snug">
-                    {a.isSelf ? (
-                      <span className="text-muted-foreground">{a.text}</span>
-                    ) : (
-                      <>
-                        <span className="font-medium">{a.actor.name}</span>{" "}
+          <Card className="gap-0 p-5">
+            <h2 className="font-medium">Activité récente</h2>
+            <ul className="mt-4 flex flex-col gap-4">
+              {activity.length > 0 ? (
+                activity.map((a) => (
+                  <li key={a.id} className="flex gap-3">
+                    <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                      <GitPullRequestArrow className="size-3.5" />
+                    </span>
+                    <div className="text-sm leading-snug">
+                      {a.isSelf ? (
                         <span className="text-muted-foreground">{a.text}</span>
-                      </>
-                    )}{" "}
-                    <span className="font-medium">{a.target}</span>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{timeAgo(a.createdAt)}</p>
-                  </div>
-                </li>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground">Aucune activité récente.</p>
-            )}
-          </ul>
-        </Card>
+                      ) : (
+                        <>
+                          <span className="font-medium">{a.actor.name}</span>{" "}
+                          <span className="text-muted-foreground">{a.text}</span>
+                        </>
+                      )}{" "}
+                      <span className="font-medium">{a.target}</span>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{timeAgo(a.createdAt)}</p>
+                    </div>
+                  </li>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">Aucune activité récente.</p>
+              )}
+            </ul>
+          </Card>
+        </div>
       </div>
     </div>
   )

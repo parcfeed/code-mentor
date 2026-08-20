@@ -1,3 +1,6 @@
+"use client"
+
+import Link from "next/link"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 
@@ -13,12 +16,14 @@ function initials(name: string) {
 export function UserAvatar({
   name,
   className,
+  username,
 }: {
   name: string
   className?: string
+  username?: string
 }) {
   const isAnon = name.toLowerCase() === "anonymous"
-  return (
+  const avatar = (
     <Avatar className={cn("size-8", className)}>
       <AvatarFallback
         className={cn(
@@ -29,5 +34,17 @@ export function UserAvatar({
         {isAnon ? "?" : initials(name)}
       </AvatarFallback>
     </Avatar>
+  )
+
+  if (!username || isAnon) return avatar
+
+  return (
+    <Link
+      href={`/profile/${username}`}
+      className="inline-flex shrink-0 rounded-full transition-opacity hover:opacity-80"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {avatar}
+    </Link>
   )
 }
