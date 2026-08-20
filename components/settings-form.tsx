@@ -15,10 +15,14 @@ function ToggleRow({
   title,
   description,
   defaultChecked,
+  checked,
+  onCheckedChange,
 }: {
   title: string
   description: string
   defaultChecked?: boolean
+  checked?: boolean
+  onCheckedChange?: (checked: boolean) => void
 }) {
   return (
     <div className="flex items-center justify-between gap-4 py-3">
@@ -26,7 +30,7 @@ function ToggleRow({
         <p className="text-sm font-medium">{title}</p>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
-      <Switch defaultChecked={defaultChecked} />
+      <Switch checked={checked} defaultChecked={defaultChecked} onCheckedChange={onCheckedChange} />
     </div>
   )
 }
@@ -34,12 +38,14 @@ function ToggleRow({
 export function SettingsForm({
   user,
 }: {
-  user: { name: string; username: string; email: string; image: string | null; bio: string }
+  user: { name: string; username: string; email: string; image: string | null; bio: string; defaultAnonymous: boolean; showInLeaderboard: boolean }
 }) {
   const [name, setName] = useState(user.name)
   const [username, setUsername] = useState(user.username)
   const [email, setEmail] = useState(user.email)
   const [bio, setBio] = useState(user.bio)
+  const [defaultAnonymous, setDefaultAnonymous] = useState(user.defaultAnonymous)
+  const [showInLeaderboard, setShowInLeaderboard] = useState(user.showInLeaderboard)
   const [saving, setSaving] = useState(false)
 
   async function save(e: React.FormEvent) {
@@ -68,7 +74,7 @@ export function SettingsForm({
       const res = await fetch("/api/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, username, bio, email }),
+        body: JSON.stringify({ name, username, bio, email, defaultAnonymous, showInLeaderboard }),
       })
       const json = await res.json()
       if (!json.success) {
@@ -89,13 +95,6 @@ export function SettingsForm({
         <h2 className="text-base font-semibold">Profil</h2>
         <p className="text-sm text-muted-foreground">Ces informations sont affichées sur votre profil public.</p>
         <Separator className="my-5" />
-
-        <div className="flex items-center gap-4">
-          <UserAvatar name={user.name} className="size-16 text-xl" />
-          <Button type="button" variant="outline" size="sm">
-            Changer l'avatar
-          </Button>
-        </div>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
@@ -131,18 +130,6 @@ export function SettingsForm({
       </Card>
 
       <Card className="p-6">
-        <h2 className="text-base font-semibold">Notifications</h2>
-        <p className="text-sm text-muted-foreground">Choisissez les notifications que vous recevez par e-mail.</p>
-        <Separator className="my-3" />
-        <div className="divide-y divide-border">
-          <ToggleRow title="Nouvelles reviews" description="Quand quelqu'un review un de vos Snippets." defaultChecked />
-          <ToggleRow title="Votes positifs" description="Quand vos reviews reçoivent un vote positif." defaultChecked />
-          <ToggleRow title="Badges & niveaux" description="Quand vous gagnez un badge ou montez de niveau." defaultChecked />
-          <ToggleRow title="Digest hebdomadaire" description="Un résumé des meilleurs Snippets chaque semaine." />
-        </div>
-      </Card>
-
-      <Card className="p-6">
         <h2 className="text-base font-semibold">Confidentialité</h2>
         <p className="text-sm text-muted-foreground">Contrôlez la façon dont votre travail est partagé.</p>
         <Separator className="my-3" />
@@ -150,13 +137,20 @@ export function SettingsForm({
           <ToggleRow
             title="Publier les Snippets anonymement par défaut"
             description="Cachez votre nom sur les nouveaux Snippets, sauf si vous choisissez l'inverse."
+            checked={defaultAnonymous}
+            onCheckedChange={setDefaultAnonymous}
           />
-          <ToggleRow title="M'afficher dans le classement" description="Apparaître dans les classements publics de réputation." defaultChecked />
+          <ToggleRow
+            title="M'afficher dans le classement"
+            description="Apparaître dans les classements publics de réputation."
+            checked={showInLeaderboard}
+            onCheckedChange={setShowInLeaderboard}
+          />
         </div>
       </Card>
 
       <div className="flex justify-end gap-3">
-        <Button type="button" variant="outline" onClick={() => { setName(user.name); setUsername(user.username); setEmail(user.email); setBio(user.bio) }}>
+        <Button type="button" variant="outline" onClick={() => { setName(user.name); setUsername(user.username); setEmail(user.email); setBio(user.bio); setDefaultAnonymous(user.defaultAnonymous); setShowInLeaderboard(user.showInLeaderboard) }}>
           Annuler
         </Button>
         <Button type="submit" disabled={saving}>{saving ? "Sauvegarde..." : "Enregistrer"}</Button>

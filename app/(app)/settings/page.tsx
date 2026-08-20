@@ -17,6 +17,8 @@ export default async function SettingsPage() {
       email: true,
       image: true,
       bio: true,
+      defaultAnonymous: true,
+      showInLeaderboard: true,
     },
   })
 

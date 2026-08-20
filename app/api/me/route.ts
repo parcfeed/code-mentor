@@ -42,7 +42,7 @@ export async function PATCH(req: NextRequest) {
     if (error) return error
 
     const body = await req.json()
-    const { name, username, bio, email } = body
+    const { name, username, bio, email, defaultAnonymous, showInLeaderboard } = body
 
     // Validation : name ne doit pas être vide
     if (name !== undefined && !name?.trim()) {
@@ -82,11 +82,13 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    const data: Record<string, string> = {}
+    const data: Record<string, string | boolean> = {}
     if (name?.trim()) data.name = name.trim()
     if (username?.trim()) data.username = username.trim()
     if (bio !== undefined) data.bio = bio
     if (email?.trim()) data.email = email.trim()
+    if (defaultAnonymous !== undefined) data.defaultAnonymous = Boolean(defaultAnonymous)
+    if (showInLeaderboard !== undefined) data.showInLeaderboard = Boolean(showInLeaderboard)
 
     const updated = await prisma.user.update({
       where: { id: currentUserId },
