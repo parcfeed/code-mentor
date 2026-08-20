@@ -96,6 +96,10 @@ export function SettingsForm({
         <p className="text-sm text-muted-foreground">Ces informations sont affichées sur votre profil public.</p>
         <Separator className="my-5" />
 
+        <div className="flex items-center gap-4">
+          <UserAvatar name={user.name} className="size-16 text-xl" username={user.username} />
+        </div>
+
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="name">Nom d'affichage</Label>
