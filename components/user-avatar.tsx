@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 
 function initials(name: string) {
@@ -17,14 +17,17 @@ export function UserAvatar({
   name,
   className,
   username,
+  image,
 }: {
   name: string
   className?: string
   username?: string
+  image?: string | null
 }) {
-  const isAnon = name.toLowerCase() === "anonymous"
+  const isAnon = name.toLowerCase() === "anonymous" || name.toLowerCase() === "anonyme"
   const avatar = (
     <Avatar className={cn("size-8", className)}>
+      {image && !isAnon && <AvatarImage src={image} alt={name} className="object-cover" />}
       <AvatarFallback
         className={cn(
           "text-xs font-medium",

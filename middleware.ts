@@ -6,6 +6,11 @@ export async function middleware(req: NextRequest) {
   const token = await getToken({ req })
   const { pathname } = req.nextUrl
 
+  // Ignorer les routes API (gérées par les handlers eux-mêmes)
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.next()
+  }
+
   // Non authentifié → rediriger vers /login
   if (!token) {
     return NextResponse.redirect(new URL("/login", req.url))
@@ -24,8 +29,9 @@ export const config = {
     "/dashboard/:path*",
     "/snippets/:path*",
     "/leaderboard/:path*",
-    "/moderation/:path*",
     "/profile/:path*",
     "/settings/:path*",
+    // Exclure les routes API (gérées par requireModerator() dans route.ts)
+    "/moderation/:path*",
   ],
 }

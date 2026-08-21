@@ -2,7 +2,7 @@
 
 import { Loader2, EyeOff, Info } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import { CodeEditor } from "@/components/code-editor"
 import { Button } from "@/components/ui/button"
@@ -36,6 +36,17 @@ export function CreateSnippetForm() {
   const [anonymous, setAnonymous] = useState(false)
   const [code, setCode] = useState(starter)
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    fetch("/api/me")
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && json.data) {
+          setAnonymous(json.data.defaultAnonymous ?? false)
+        }
+      })
+      .catch((err) => console.error("Error fetching user settings", err))
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

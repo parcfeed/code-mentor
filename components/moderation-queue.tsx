@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Check, X, ShieldAlert, Flag, ExternalLink } from "lucide-react"
+import { Check, X, ShieldAlert, Flag, ExternalLink, Eye, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
 import { UserAvatar } from "@/components/user-avatar"
@@ -19,8 +19,8 @@ type ReportItem = {
   reason: string
   reporterComment: string | null
   reportedContent: string
-  reporter: { id: string; name: string; avatar: string }
-  target: { id: string; name: string; avatar: string }
+  reporter: { id: string; name: string; avatar: string; username?: string }
+  target: { id: string; name: string; avatar: string; username?: string }
   createdAt: string
   status: "pending" | "resolved" | "dismissed"
   severity: "low" | "medium" | "high"
@@ -53,13 +53,22 @@ const severityLabels: Record<string, string> = {
 export function ModerationQueue({ initialReports }: { initialReports: ReportItem[] }) {
   const [reports, setReports] = useState(initialReports)
   const [filter, setFilter] = useState<"all" | ReportItem["status"]>("all")
+  const [revealedAuthors, setRevealedAuthors] = useState<
+    Record<string, { name: string; username: string }>
+  >({})
+  const [revealing, setRevealing] = useState<string | null>(null)
 
-  async function resolve(id: string, status: "resolved" | "dismissed") {
+  async function resolve(
+    id: string,
+    status: "resolved" | "dismissed",
+    deleteContent = false,
+    applySanction = false
+  ) {
     try {
       const res = await fetch(`/api/reports/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, deleteContent, applySanction }),
       })
       const json = await res.json()
       if (!json.success) {
@@ -67,9 +76,34 @@ export function ModerationQueue({ initialReports }: { initialReports: ReportItem
         return
       }
       setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)))
-      toast.success(status === "resolved" ? "Signalement résolu et contenu supprimé." : "Signalement rejeté.")
+      toast.success(
+        status === "resolved"
+          ? (deleteContent ? "Signalement résolu et contenu supprimé." : "Signalement résolu sans suppression.")
+          : "Signalement rejeté."
+      )
     } catch {
       toast.error("Échec de la mise à jour du signalement")
+    }
+  }
+
+  async function revealAuthor(snippetId: string) {
+    setRevealing(snippetId)
+    try {
+      const res = await fetch(`/api/moderation/snippets/${snippetId}/reveal`)
+      const json = await res.json()
+      if (!json.success) {
+        toast.error(json.error?.message ?? "Impossible de révéler l'auteur")
+        return
+      }
+      setRevealedAuthors((prev) => ({
+        ...prev,
+        [snippetId]: { name: json.data.author.name, username: json.data.author.username },
+      }))
+      toast.success("Auteur révélé.")
+    } catch {
+      toast.error("Erreur lors de la révélation de l'auteur")
+    } finally {
+      setRevealing(null)
     }
   }
 
@@ -94,73 +128,103 @@ export function ModerationQueue({ initialReports }: { initialReports: ReportItem
           <p className="text-sm text-muted-foreground">Aucun signalement ne correspond à ce filtre.</p>
         </Card>
       ) : (
-        filtered.map((report) => (
-          <Card key={report.id} className="p-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Flag className="size-4 text-destructive" />
-                <span className="font-medium">{report.reason}</span>
-                <Badge variant="outline" className={cn("rounded-md", severityStyles[report.severity])}>
-                  {severityLabels[report.severity] ?? report.severity}
-                </Badge>
-                <Badge variant="outline" className={cn("rounded-md", statusStyles[report.status])}>
-                  {statusLabels[report.status] ?? report.status}
-                </Badge>
+        filtered.map((report) => {
+          const targetInfo = revealedAuthors[report.snippetId ?? ""] || report.target
+          return (
+            <Card key={report.id} className="p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Flag className="size-4 text-destructive" />
+                  <span className="font-medium">{report.reason}</span>
+                  <Badge variant="outline" className={cn("rounded-md", severityStyles[report.severity])}>
+                    {severityLabels[report.severity] ?? report.severity}
+                  </Badge>
+                  <Badge variant="outline" className={cn("rounded-md", statusStyles[report.status])}>
+                    {statusLabels[report.status] ?? report.status}
+                  </Badge>
+                </div>
+                <span className="text-xs text-muted-foreground">{timeAgo(report.createdAt)}</span>
               </div>
-              <span className="text-xs text-muted-foreground">{timeAgo(report.createdAt)}</span>
-            </div>
 
-            {report.reviewSnippet && (
-              <p className="mt-2 text-sm text-muted-foreground">
-                Sur le snippet :{" "}
-                <span className="font-medium text-foreground">{report.reviewSnippet}</span>
-                {report.snippetId && (
+              {report.reviewSnippet && (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Relecture pour :{" "}
+                  <span className="font-medium text-foreground">{report.reviewSnippet}</span>
+                  {report.snippetId && (
+                    <Link
+                      href={`/snippets/${report.snippetId}`}
+                      className="ml-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                    >
+                      Voir le snippet <ExternalLink className="size-3" />
+                    </Link>
+                  )}
+                </p>
+              )}
+
+              <blockquote className="mt-3 rounded-lg border-l-2 border-destructive/40 bg-muted/40 px-4 py-3 text-sm italic text-foreground/90">
+                &ldquo;{report.reportedContent}&rdquo;
+              </blockquote>
+
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
                   <Link
-                    href={`/snippets/${report.snippetId}`}
-                    className="ml-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                    href={report.reporter.username ? `/profile/${report.reporter.username}` : "#"}
+                    className="flex items-center gap-1.5 hover:text-foreground transition-colors"
                   >
-                    Voir le snippet <ExternalLink className="size-3" />
+                    <UserAvatar name={report.reporter.name} className="size-5" />
+                    Signalé par <span className="font-medium text-foreground">{report.reporter.name}</span>
                   </Link>
+
+                  {targetInfo.name === "Anonyme" ? (
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <UserAvatar name="Anonyme" className="size-5" />
+                        Contre <span className="font-medium text-foreground">Anonyme</span>
+                      </span>
+                      {report.status === "pending" && report.snippetId && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 px-1.5 text-xs text-primary hover:text-primary/80"
+                          onClick={() => revealAuthor(report.snippetId!)}
+                          disabled={revealing === report.snippetId}
+                        >
+                          {revealing === report.snippetId ? "Révélation..." : "Révéler l'auteur"}
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <Link
+                      href={targetInfo.username ? `/profile/${targetInfo.username}` : "#"}
+                      className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+                    >
+                      <UserAvatar name={targetInfo.name} className="size-5" />
+                      Contre <span className="font-medium text-foreground">{targetInfo.name}</span>
+                    </Link>
+                  )}
+                </div>
+
+                {report.status === "pending" && (
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => resolve(report.id, "dismissed", false, false)}>
+                      <X className="size-4" /> Rejeter
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={() => resolve(report.id, "resolved", true, true)}>
+                      <Check className="size-4" /> Supprimer le contenu
+                    </Button>
+                  </div>
                 )}
-              </p>
-            )}
-
-            <blockquote className="mt-3 rounded-lg border-l-2 border-destructive/40 bg-muted/40 px-4 py-3 text-sm italic text-foreground/90">
-              &ldquo;{report.reportedContent}&rdquo;
-            </blockquote>
-
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <UserAvatar name={report.reporter.name} className="size-5" />
-                  Signalé par {report.reporter.name}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <UserAvatar name={report.target.name} className="size-5" />
-                  Contre {report.target.name}
-                </span>
               </div>
 
-              {report.status === "pending" && (
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => resolve(report.id, "dismissed")}>
-                    <X className="size-4" /> Rejeter
-                  </Button>
-                  <Button size="sm" variant="destructive" onClick={() => resolve(report.id, "resolved")}>
-                    <Check className="size-4" /> Supprimer le contenu
-                  </Button>
+              {report.reporterComment && (
+                <div className="mt-3 rounded-lg border border-border bg-muted/30 px-4 py-3">
+                  <p className="text-xs font-medium text-muted-foreground">Précision du signalement :</p>
+                  <p className="mt-1 text-sm text-foreground/90">&ldquo;{report.reporterComment}&rdquo;</p>
                 </div>
               )}
-            </div>
-
-            {report.reporterComment && (
-              <div className="mt-3 rounded-lg border border-border bg-muted/30 px-4 py-3">
-                <p className="text-xs font-medium text-muted-foreground">Précision du signalement :</p>
-                <p className="mt-1 text-sm text-foreground/90">&ldquo;{report.reporterComment}&rdquo;</p>
-              </div>
-            )}
-          </Card>
-        ))
+            </Card>
+          )
+        })
       )}
     </div>
   )

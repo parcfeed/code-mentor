@@ -1,9 +1,11 @@
 "use client"
-
+ 
 import { useState } from "react"
-import { ArrowBigUp, ArrowBigDown, MessageSquare, Flag } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { ArrowBigUp, ArrowBigDown, MessageSquare, Flag, Code2 } from "lucide-react"
 import Link from "next/link"
 import { useSession } from "next-auth/react"
+import { toast } from "sonner"
 import { UserAvatar } from "@/components/user-avatar"
 import { RatingStars } from "@/components/meta-badges"
 import { Button } from "@/components/ui/button"
@@ -13,11 +15,13 @@ import { timeAgo } from "@/lib/utils"
 import { ReportModal } from "@/components/report-modal"
 
 export function ReviewCard({ review }: { review: Review }) {
+  const router = useRouter()
   const { data: session } = useSession()
   const isOwn = session?.user?.id === review.reviewer.id
   const [vote, setVote] = useState<"up" | "down" | null>(null)
   const [score, setScore] = useState(review.upvotes - review.downvotes)
   const [reportOpen, setReportOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   async function handleVote(kind: "up" | "down") {
     const newVote = vote === kind ? null : kind
@@ -42,12 +46,37 @@ export function ReviewCard({ review }: { review: Review }) {
     }
   }
 
+  async function handleDeleteReview() {
+    if (!confirm("Voulez-vous vraiment supprimer votre relecture ?")) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/snippets/${review.snippetId}/reviews/${review.id}`, {
+        method: "DELETE",
+      })
+      const json = await res.json()
+      if (!json.success) {
+        toast.error(json.error?.message ?? "Échec de la suppression de la relecture")
+        return
+      }
+      toast.success("Relecture supprimée.")
+      router.refresh()
+    } catch {
+      toast.error("Erreur lors de la suppression")
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <>
       <article className="rounded-xl border border-border bg-card p-5">
         <header className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
-            <UserAvatar name={review.reviewer.name} className="size-9" />
+            <UserAvatar
+              name={review.reviewer.name}
+              className="size-9"
+              username={review.reviewer.username}
+            />
             <div>
               <Link href={`/profile/${review.reviewer.username}`} className="text-sm font-medium hover:text-primary">
                 {review.reviewer.name}
@@ -61,6 +90,16 @@ export function ReviewCard({ review }: { review: Review }) {
           </div>
           <RatingStars rating={review.rating} />
         </header>
+
+        {review.snippetTitle && (
+          <Link
+            href={`/snippets/${review.snippetId}`}
+            className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-muted/50 px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <Code2 className="size-3.5" />
+            {review.snippetTitle}
+          </Link>
+        )}
 
         <p className="mt-4 text-sm leading-relaxed text-foreground/90">{review.summary}</p>
 
@@ -103,9 +142,13 @@ export function ReviewCard({ review }: { review: Review }) {
               <ArrowBigDown className={cn("size-4", vote === "down" && "fill-destructive")} />
             </Button>
           </div>
-          {!isOwn && (
+          {!isOwn ? (
             <Button variant="ghost" size="sm" className="ml-auto h-8 text-muted-foreground hover:text-destructive" onClick={() => setReportOpen(true)}>
               <Flag className="size-3.5" /> Signaler
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm" disabled={deleting} className="ml-auto h-8 text-muted-foreground hover:text-destructive" onClick={handleDeleteReview}>
+              Supprimer
             </Button>
           )}
         </footer>

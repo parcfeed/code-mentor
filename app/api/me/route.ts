@@ -42,7 +42,7 @@ export async function PATCH(req: NextRequest) {
     if (error) return error
 
     const body = await req.json()
-    const { name, username, bio, email, defaultAnonymous, showInLeaderboard } = body
+    const { name, username, bio, email, defaultAnonymous, showInLeaderboard, image } = body
 
     // Validation : name ne doit pas être vide
     if (name !== undefined && !name?.trim()) {
@@ -56,6 +56,21 @@ export async function PATCH(req: NextRequest) {
       return validationError("La bio ne peut pas dépasser 500 caractères", [
         { field: "bio", reason: "too_big", message: "La bio ne peut pas dépasser 500 caractères" },
       ])
+    }
+
+    // Validation : image de profil (taille maximale 2 Mo et format correct)
+    if (image !== undefined && image !== null) {
+      if (typeof image !== "string" || !/^data:image\/(jpeg|png|webp);base64,/.test(image)) {
+        return validationError("Le format de l'image de profil est invalide. Formats acceptés : JPG, PNG, WebP.", [
+          { field: "image", reason: "invalid_type", message: "Formats acceptés : JPG, PNG, WebP." }
+        ])
+      }
+      const approxBytes = (image.length * 3) / 4
+      if (approxBytes > 2.1 * 1024 * 1024) {
+        return validationError("L'image de profil dépasse la limite autorisée de 2 Mo.", [
+          { field: "image", reason: "too_big", message: "L'image de profil dépasse la limite autorisée de 2 Mo." }
+        ])
+      }
     }
 
     const currentUserId = session!.user.id
@@ -82,13 +97,14 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    const data: Record<string, string | boolean> = {}
+    const data: Record<string, string | boolean | null> = {}
     if (name?.trim()) data.name = name.trim()
     if (username?.trim()) data.username = username.trim()
     if (bio !== undefined) data.bio = bio
     if (email?.trim()) data.email = email.trim()
     if (defaultAnonymous !== undefined) data.defaultAnonymous = Boolean(defaultAnonymous)
     if (showInLeaderboard !== undefined) data.showInLeaderboard = Boolean(showInLeaderboard)
+    if (image !== undefined) data.image = image
 
     const updated = await prisma.user.update({
       where: { id: currentUserId },

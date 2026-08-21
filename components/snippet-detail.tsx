@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ArrowLeft, MessageSquarePlus, ListChecks, Send, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 import { useSession } from "next-auth/react"
@@ -77,11 +78,18 @@ export function SnippetDetail({ snippet, reviews }: { snippet: Snippet; reviews:
     }
   }
 
+  const router = useRouter()
+
   return (
     <div>
-      <Link href="/snippets" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="size-4" /> Retour aux Snippets
-      </Link>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => router.back()}
+        className="mb-4 gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="size-4" /> Retour
+      </Button>
 
       <Card className="mt-2 gap-0 p-5">
         <div className="flex flex-wrap items-center gap-3">
@@ -93,9 +101,22 @@ export function SnippetDetail({ snippet, reviews }: { snippet: Snippet; reviews:
         </div>
         <h1 className="mt-3 text-2xl font-semibold tracking-tight text-balance">{snippet.title}</h1>
         <div className="mt-3 flex items-center gap-3">
-          <UserAvatar name={snippet.isAnonymous ? "Anonyme" : snippet.author.name} className="size-8" />
+          <UserAvatar
+            name={snippet.isAnonymous ? "Anonyme" : snippet.author.name}
+            className="size-8"
+            username={snippet.isAnonymous ? undefined : snippet.author.username}
+          />
           <div>
-            <p className="text-sm font-medium">{snippet.isAnonymous ? "Anonyme" : snippet.author.name}</p>
+            {snippet.isAnonymous ? (
+              <p className="text-sm font-medium">Anonyme</p>
+            ) : (
+              <Link
+                href={`/profile/${snippet.author.username}`}
+                className="text-sm font-medium hover:underline hover:text-primary transition-colors"
+              >
+                {snippet.author.name}
+              </Link>
+            )}
             <p className="text-xs text-muted-foreground">Publié {timeAgo(snippet.createdAt)}</p>
           </div>
         </div>

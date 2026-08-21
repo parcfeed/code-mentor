@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation"
+import { getServerSession } from "next-auth"
 import { prisma } from "@/lib/prisma"
+import { authOptions } from "@/lib/auth"
 import { SnippetDetail } from "@/components/snippet-detail"
 
 export default async function SnippetPage({ params }: { params: Promise<{ id: string }> }) {
@@ -20,6 +22,9 @@ export default async function SnippetPage({ params }: { params: Promise<{ id: st
   })
   if (!snippet) notFound()
 
+  const session = await getServerSession(authOptions)
+  const isModerator = session?.user?.role === "moderator"
+
   const mappedSnippet = {
     id: snippet.id,
     title: snippet.title,
@@ -27,10 +32,11 @@ export default async function SnippetPage({ params }: { params: Promise<{ id: st
     language: snippet.language,
     difficulty: snippet.difficulty,
     isAnonymous: snippet.isAnonymous,
-    // Ne pas exposer les infos de l'auteur si le snippet est anonyme
-    author: snippet.isAnonymous
-      ? { id: "", name: "Anonyme", username: "", image: null }
-      : snippet.author,
+    // Un modérateur peut voir l'auteur réel d'un snippet anonyme
+    author:
+      snippet.isAnonymous && !isModerator
+        ? { id: "", name: "Anonyme", username: "", image: null }
+        : snippet.author,
     createdAt: snippet.createdAt.toISOString(),
     reviewsCount: snippet.reviewsCount,
     averageRating: Number(snippet.averageRating),
@@ -41,6 +47,7 @@ export default async function SnippetPage({ params }: { params: Promise<{ id: st
   const mappedReviews = snippet.reviews.map((r) => ({
     id: r.id,
     snippetId: r.snippetId,
+    snippetTitle: snippet.title,
     reviewer: r.reviewer,
     summary: r.summary,
     rating: r.rating,

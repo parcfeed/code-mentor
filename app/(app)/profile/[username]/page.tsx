@@ -7,6 +7,7 @@ import { UserAvatar } from "@/components/user-avatar"
 import { BadgeChip } from "@/components/badge-chip"
 import { SnippetCard } from "@/components/snippet-card"
 import { ReviewCard } from "@/components/review-card"
+import { ProfileBackButton } from "@/components/profile-back-button"
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -92,6 +93,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const userReviews = user.reviews.map((r) => ({
     id: r.id,
     snippetId: r.snippetId,
+    snippetTitle: r.snippet.title,
     reviewer: r.reviewer,
     summary: r.summary,
     rating: r.rating,
@@ -109,9 +111,10 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
   return (
     <div className="space-y-6">
+      {!isOwner && <ProfileBackButton />}
       <Card className="p-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-          <UserAvatar name={user.name} className="size-20 text-2xl" />
+          <UserAvatar name={user.name} className="size-20 text-2xl" image={user.image} />
           <div className="flex-1">
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl font-semibold tracking-tight">{user.name}</h1>
@@ -171,7 +174,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
               {userSnippets.map((s) => (
-                <SnippetCard key={s.id} snippet={s} />
+                <SnippetCard key={s.id} snippet={s} isEditable={isOwner} />
               ))}
             </div>
           )}

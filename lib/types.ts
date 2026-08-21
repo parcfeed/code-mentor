@@ -47,6 +47,7 @@ export type LineComment = {
 export type Review = {
   id: string
   snippetId: string
+  snippetTitle?: string
   reviewer: Pick<User, "id" | "name" | "username" | "reputation">
   summary: string
   rating: number
@@ -78,8 +79,8 @@ export type Report = {
   reason: string
   reporterComment: string | null
   reportedContent: string
-  reporter: Pick<User, "id" | "name">
-  target: Pick<User, "id" | "name">
+  reporter: Pick<User, "id" | "name" | "username">
+  target: Pick<User, "id" | "name" | "username">
   createdAt: string
   status: "pending" | "resolved" | "dismissed"
   severity: "low" | "medium" | "high"

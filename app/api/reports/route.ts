@@ -57,8 +57,8 @@ export async function POST(req: NextRequest) {
         severity: "low",
       },
       include: {
-        reporter: { select: { id: true, name: true, image: true } },
-        targetUser: { select: { id: true, name: true, image: true } },
+        reporter: { select: { id: true, name: true, username: true, image: true } },
+        targetUser: { select: { id: true, name: true, username: true, image: true } },
       },
     })
 
@@ -77,25 +77,36 @@ export async function GET() {
     const reports = await prisma.report.findMany({
       orderBy: { createdAt: "desc" },
       include: {
-        reporter: { select: { id: true, name: true, image: true } },
-        targetUser: { select: { id: true, name: true, image: true } },
-        review: { select: { id: true, snippet: { select: { id: true, title: true } } } },
+        reporter: { select: { id: true, name: true, username: true, image: true } },
+        targetUser: { select: { id: true, name: true, username: true, image: true } },
+        snippet: { select: { id: true, isAnonymous: true } },
+        review: {
+          select: {
+            id: true,
+            snippet: { select: { id: true, title: true, isAnonymous: true } },
+          },
+        },
       },
     })
 
-    const mapped = reports.map((r) => ({
-      id: r.id,
-      reviewSnippet: r.review?.snippet?.title ?? null,
-      snippetId: r.review?.snippet?.id ?? r.snippetId ?? null,
-      reason: r.reason,
-      reporterComment: r.reporterComment ?? null,
-      reportedContent: r.reportedContent,
-      reporter: { id: r.reporter.id, name: r.reporter.name, avatar: r.reporter.image ?? "" },
-      target: { id: r.targetUser.id, name: r.targetUser.name, avatar: r.targetUser.image ?? "" },
-      createdAt: r.createdAt.toISOString(),
-      status: r.status,
-      severity: r.severity,
-    }))
+    const mapped = reports.map((r) => {
+      const isTargetAnonymous = (r.snippet?.isAnonymous ?? r.review?.snippet?.isAnonymous) === true
+      return {
+        id: r.id,
+        reviewSnippet: r.review?.snippet?.title ?? null,
+        snippetId: r.review?.snippet?.id ?? r.snippetId ?? null,
+        reason: r.reason,
+        reporterComment: r.reporterComment ?? null,
+        reportedContent: r.reportedContent,
+        reporter: { id: r.reporter.id, name: r.reporter.name, username: r.reporter.username, avatar: r.reporter.image ?? "" },
+        target: isTargetAnonymous
+          ? { id: "", name: "Anonyme", username: "", avatar: "" }
+          : { id: r.targetUser.id, name: r.targetUser.name, username: r.targetUser.username, avatar: r.targetUser.image ?? "" },
+        createdAt: r.createdAt.toISOString(),
+        status: r.status,
+        severity: r.severity,
+      }
+    })
 
     return successResponse(mapped)
   } catch (e) {

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { UserAvatar } from "@/components/user-avatar"
 import { Card } from "@/components/ui/card"
@@ -40,13 +41,38 @@ export function SettingsForm({
 }: {
   user: { name: string; username: string; email: string; image: string | null; bio: string; defaultAnonymous: boolean; showInLeaderboard: boolean }
 }) {
+  const router = useRouter()
   const [name, setName] = useState(user.name)
   const [username, setUsername] = useState(user.username)
   const [email, setEmail] = useState(user.email)
   const [bio, setBio] = useState(user.bio)
+  const [avatar, setAvatar] = useState<string | null>(user.image)
   const [defaultAnonymous, setDefaultAnonymous] = useState(user.defaultAnonymous)
   const [showInLeaderboard, setShowInLeaderboard] = useState(user.showInLeaderboard)
   const [saving, setSaving] = useState(false)
+
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const validTypes = ["image/jpeg", "image/png", "image/webp"]
+    if (!validTypes.includes(file.type)) {
+      toast.error("Format d'image non supporté. Veuillez choisir du JPG, PNG ou WebP.")
+      return
+    }
+
+    const maxSize = 2 * 1024 * 1024
+    if (file.size > maxSize) {
+      toast.error("L'image est trop volumineuse. Taille maximale : 2 Mo.")
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setAvatar(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
 
   async function save(e: React.FormEvent) {
     e.preventDefault()
@@ -74,7 +100,7 @@ export function SettingsForm({
       const res = await fetch("/api/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, username, bio, email, defaultAnonymous, showInLeaderboard }),
+        body: JSON.stringify({ name, username, bio, email, defaultAnonymous, showInLeaderboard, image: avatar }),
       })
       const json = await res.json()
       if (!json.success) {
@@ -82,6 +108,7 @@ export function SettingsForm({
         return
       }
       toast.success("Paramètres sauvegardés.")
+      router.refresh()
     } catch {
       toast.error("Échec de la sauvegarde des paramètres")
     } finally {
@@ -97,7 +124,22 @@ export function SettingsForm({
         <Separator className="my-5" />
 
         <div className="flex items-center gap-4">
-          <UserAvatar name={user.name} className="size-16 text-xl" username={user.username} />
+          <UserAvatar name={name} className="size-16 text-xl" username={username} image={avatar} />
+          <input
+            type="file"
+            id="avatar-upload"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={handleAvatarChange}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => document.getElementById("avatar-upload")?.click()}
+          >
+            Changer l'avatar
+          </Button>
         </div>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">

@@ -16,3 +16,6 @@ node_modules
 .next/
 .DS_Store
 /lib/generated/prisma
+
+# Demo seed data (local only)
+prisma/seed-demo.ts

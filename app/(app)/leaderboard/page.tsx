@@ -8,36 +8,98 @@ import { UserAvatar } from "@/components/user-avatar"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { LeaderboardFilter } from "./filter"
 
-export default async function LeaderboardPage() {
+export default async function LeaderboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ language?: string }>
+}) {
   const session = await getServerSession(authOptions)
-  const users = await prisma.user.findMany({
-    select: {
-      id: true,
-      name: true,
-      username: true,
-      image: true,
-      reputation: true,
-      level: true,
-      levelTitle: true,
-      _count: { select: { reviews: true } },
-    },
-    orderBy: { reputation: "desc" },
-    take: 50,
-  })
+  const params = await searchParams
+  const language = params.language ?? "all"
+
+  let users: any[] = []
+
+  if (language && language !== "all") {
+    const reviewsByLang = await prisma.review.groupBy({
+      by: ["reviewerId"],
+      where: { snippet: { language: { equals: language, mode: "insensitive" } } },
+      _count: { reviewerId: true },
+      orderBy: { _count: { reviewerId: "desc" } },
+      take: 50,
+    })
+
+    if (reviewsByLang.length > 0) {
+      const userIds = reviewsByLang.map((r) => r.reviewerId)
+      const reviewCountByUser = Object.fromEntries(
+        reviewsByLang.map((r) => [r.reviewerId, r._count.reviewerId])
+      )
+
+      const usersRaw = await prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          image: true,
+          reputation: true,
+          level: true,
+          levelTitle: true,
+          _count: { select: { reviews: true } },
+        },
+      })
+
+      users = usersRaw
+        .map((u) => ({
+          ...u,
+          reviewsCount: u._count.reviews,
+          reviewsInLanguage: reviewCountByUser[u.id] ?? 0,
+        }))
+        .sort((a, b) => b.reviewsInLanguage - a.reviewsInLanguage)
+    }
+  } else {
+    const usersRaw = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        image: true,
+        reputation: true,
+        level: true,
+        levelTitle: true,
+        _count: { select: { reviews: true } },
+      },
+      orderBy: { reputation: "desc" },
+      take: 50,
+    })
+    users = usersRaw.map((u) => ({
+      ...u,
+      reviewsCount: u._count.reviews,
+    }))
+  }
 
   const currentUserId = session?.user?.id
 
   return (
-    <div>
-      <PageHeader
-        title="Classement"
-        description="Les relecteurs les plus utiles ce mois-ci, classés par réputation gagnée."
-      />
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <PageHeader
+          title="Classement"
+          description="Les relecteurs les plus utiles ce mois-ci, classés par réputation ou par volume."
+        />
+        <div className="shrink-0">
+          <LeaderboardFilter currentLanguage={language} />
+        </div>
+      </div>
 
-      {users.length > 0 && (
+      {users.length === 0 ? (
+        <Card className="p-12 text-center text-muted-foreground">
+          Aucun utilisateur n'a rédigé de review pour le langage "{language}" pour le moment.
+        </Card>
+      ) : (
         <>
-          <div className="mb-8 grid grid-cols-3 gap-3 sm:gap-6">
+          <div className="grid grid-cols-3 gap-3 sm:gap-6">
             {[users[1] ?? null, users[0] ?? null, users[2] ?? null].map((user, i) => {
               if (!user) return <div key={`empty-${i}`} />
               const rank = i === 0 ? 2 : i === 1 ? 1 : 3
@@ -52,7 +114,7 @@ export default async function LeaderboardPage() {
                   )}
                 >
                   <div className="relative">
-                    <UserAvatar name={user.name} className={cn("size-14 sm:size-16", rank === 1 && "size-16 sm:size-20")} />
+                    <UserAvatar name={user.name} className={cn("size-14 sm:size-16", rank === 1 && "size-16 sm:size-20")} username={user.username} image={user.image} />
                     <span
                       className={cn(
                         "absolute -bottom-1 -right-1 flex size-6 items-center justify-center rounded-full text-xs font-bold text-primary-foreground",
@@ -96,7 +158,7 @@ export default async function LeaderboardPage() {
                     {i + 1}
                   </span>
                   <Link href={`/profile/${user.username}`} className="flex min-w-0 items-center gap-3">
-                    <UserAvatar name={user.name} className="size-8" />
+                    <UserAvatar name={user.name} className="size-8" image={user.image} />
                     <span className="min-w-0">
                       <span className="block truncate font-medium hover:text-primary">
                         {user.name}
@@ -111,7 +173,7 @@ export default async function LeaderboardPage() {
                   </Link>
                   <span className="hidden items-center justify-end gap-1 text-muted-foreground sm:flex">
                     <MessageSquare className="size-3.5" />
-                    {user._count.reviews}
+                    {language !== "all" ? (user.reviewsInLanguage ?? 0) : user.reviewsCount}
                   </span>
                   <span className="hidden items-center justify-end gap-1 text-muted-foreground sm:flex">
                     <Award className="size-3.5" /> {user.level}

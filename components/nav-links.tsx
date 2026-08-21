@@ -21,6 +21,7 @@ export function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
   const { data: session } = useSession()
   const role = session?.user?.role
+  const username = session?.user?.username
 
   const isModerator = role === "moderator"
   const navItems = isModerator
@@ -30,10 +31,15 @@ export function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav className="flex flex-col gap-1">
       {navItems.map((item) => {
-        const active =
-          item.href === "/snippets"
-            ? pathname === "/snippets"
-            : pathname === item.href || pathname.startsWith(item.href + "/")
+        let active = false
+        if (item.href === "/snippets") {
+          active = pathname === "/snippets"
+        } else if (item.href === "/profile") {
+          // Only highlight "Profil" on /profile (redirect) or /profile/<own-username>
+          active = pathname === "/profile" || (username !== undefined && pathname === `/profile/${username}`)
+        } else {
+          active = pathname === item.href || pathname.startsWith(item.href + "/")
+        }
         const Icon = item.icon
         return (
           <Link

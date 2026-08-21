@@ -50,7 +50,7 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           name: user.name,
           email: user.email,
-          image: user.image,
+          image: null, // Ne pas inclure le Base64 de l'image dans le JWT de session
           username: user.username,
           role: user.role,
           reputation: user.reputation,
@@ -81,7 +81,6 @@ export const authOptions: NextAuthOptions = {
             reputation: true,
             level: true,
             levelTitle: true,
-            image: true,
           },
         })
         if (dbUser) {
@@ -91,7 +90,6 @@ export const authOptions: NextAuthOptions = {
           token.reputation = dbUser.reputation
           token.level = dbUser.level
           token.levelTitle = dbUser.levelTitle
-          token.picture = dbUser.image
         }
       }
       return token
